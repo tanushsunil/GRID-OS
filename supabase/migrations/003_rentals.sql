@@ -29,3 +29,5 @@ create index on public.rentals(project_id);
 -- Rental costs are financial data: managers and admins only.
 create policy manager_read on public.rentals for select to authenticated using (is_manager(workspace_id));
 create policy manager_write on public.rentals for all to authenticated using (is_manager(workspace_id)) with check (is_manager(workspace_id));
+-- Tables added after 001 need their own access grant (Supabase doesn't always add one automatically).
+grant select,insert,update,delete on public.rentals to authenticated;
