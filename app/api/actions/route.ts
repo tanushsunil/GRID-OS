@@ -19,7 +19,7 @@ export async function POST(request:Request){
  case 'workspace':result=await db.from('workspaces').update(z.object({name:z.string().trim().min(1).max(100),billing_address:z.string().max(1000),tax_id:z.string().max(100)}).parse(body.data)).eq('id',uuid.parse(body.workspace_id)).select('id').single();break;
  default:return reply({error:'Unknown action.'},400);
  }
- if(result.error)return reply({error:'This action could not be completed. Check your access and the record status. New team members must sign up first.'},400);
+ if(result.error){console.error('[actions]',body.action,result.error.code,result.error.message);return reply({error:`This action could not be completed (${result.error.message}). Check your access and the record status. New team members must sign up first.`},400);}
  return reply({result:result.data});
  }catch(err){return failure(err,{invalid:'Check the details and try again.',fallback:'This action could not be completed right now. Please try again.'});}
 }
