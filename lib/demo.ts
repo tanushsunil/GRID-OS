@@ -1,4 +1,4 @@
-import {emptyData,today,entities,type Data,type Row,totals,invoiceState} from './domain';
+import {emptyData,today,entities,type Data,type Row,totals,invoiceState,nextNumber} from './domain';
 import {defaultExtras,presetsFromRentals} from './extras';
 const uid=()=>crypto.randomUUID();
 const day=(offset:number)=>{const d=new Date(today()+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+offset);return d.toISOString().slice(0,10);};
@@ -104,4 +104,22 @@ export function validateDemoSave(data:Data,entity:string,r:Row){
  if(['invoices','estimates'].includes(entity)&&r.discount>totals(r.items).subtotal)throw Error('Discount cannot exceed subtotal.');
  if(r.shoot_id&&!data.shoots.some(s=>s.id===r.shoot_id&&s.project_id===r.project_id))throw Error('Choose a shoot from this project.');
  if(r.deliverable_id&&!data.deliverables.some(d=>d.id===r.deliverable_id&&d.project_id===r.project_id))throw Error('Choose a deliverable from this project.');
+}
+/** Apply a checked import plan (see lib/import.ts) to the demo workspace. Returns what was added. */
+export function demoImport(state:any,plan:import('./import').ImportPlan){
+ const data:Data=state.data;const w=state.workspace?.id;const stamp=new Date().toISOString();
+ const row=(x:Record<string,any>):Row=>({id:uid(),workspace_id:w,created_at:stamp,...x});
+ if(plan.kind!=='invoices'){const rows=plan.ready.map(r=>row(r));data[plan.kind]=[...rows,...data[plan.kind]];return {[plan.kind]:rows.length};}
+ let clients=0,projects=0,invoices=0;
+ for(const inv of plan.ready as import('./import').InvoiceImport[]){
+  let client=data.clients.find(c=>String(c.name).trim().toLowerCase()===inv.client.trim().toLowerCase());
+  if(!client){client=row({name:inv.client});data.clients.unshift(client);clients++;}
+  let project=data.projects.find(p=>p.client_id===client!.id&&String(p.name).trim().toLowerCase()===inv.project.trim().toLowerCase());
+  if(!project){project=row({name:inv.project,client_id:client.id,status:'Completed',start_date:inv.issue_date,delivered_at:stamp});data.projects.unshift(project);projects++;}
+  if(inv.number&&data.invoices.some(i=>String(i.number).toLowerCase()===inv.number.toLowerCase()))throw Error(`Invoice ${inv.number} already exists. Nothing was imported.`);
+  const invoice=row({name:inv.name,number:inv.number||nextNumber(data.invoices,'INV'),client_id:client.id,project_id:project.id,issue_date:inv.issue_date,due_date:inv.due_date,discount:inv.discount,notes:inv.notes,payment_terms:inv.payment_terms,status:inv.status,items:inv.items});
+  data.invoices.unshift(invoice);invoices++;
+  if(inv.amount_paid>0)data.payments.unshift(row({invoice_id:invoice.id,amount:inv.amount_paid,date:inv.payment_date||inv.due_date,method:inv.payment_method,reference:'Imported'}));
+ }
+ return {invoices,clients,projects};
 }

@@ -111,11 +111,12 @@ export function describeActivity(a:Activity,actorName:string){
   case 'reschedule':return `${actorName} rescheduled ${name} to ${a.to?displayDate(a.to):'a new date'}`;
   case 'delete':return `${actorName} deleted ${of}`;
   case 'sent':return `${actorName} sent a payment reminder for ${a.name}`;
+  case 'import':return `${actorName} ${(a.name||'imported records').replace(/^Imported/,'imported')}`;
   case 'template':return `${actorName} created project ${name} from the “${a.to}” template`;
   default:return `${actorName} updated ${of}`;
  }
 }
-export const activityHref=(a:Activity)=>a.action==='delete'?undefined:a.entity==='reminders'?`/invoices/${a.record_id}`:`/${a.entity}/${a.record_id}`;
+export const activityHref=(a:Activity)=>a.action==='delete'?undefined:a.action==='import'?`/${a.entity}`:a.entity==='reminders'?`/invoices/${a.record_id}`:`/${a.entity}/${a.record_id}`;
 export const activityGroup=(a:Activity)=>['invoices','payments','estimates','reminders'].includes(a.entity)?'Finance':a.entity==='projects'?'Projects':['tasks','deliverables'].includes(a.entity)?'Production':['shoots','rentals'].includes(a.entity)?'Shoots':'Relationships';
 export const relativeTime=(iso:string)=>{const s=(Date.now()-Date.parse(iso))/1000;if(s<60)return 'Just now';if(s<3600)return `${Math.floor(s/60)}m ago`;if(s<86400)return `${Math.floor(s/3600)}h ago`;if(s<604800)return `${Math.floor(s/86400)}d ago`;return new Date(iso).toLocaleDateString('en-IN',{day:'numeric',month:'short'});};
 
