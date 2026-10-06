@@ -1,13 +1,13 @@
 import {createServerClient} from '@supabase/ssr';
 import {NextResponse,type NextRequest} from 'next/server';
-/** Keeps the sign-in session fresh. If the auth service is slow or down, the request still goes through. */
+/** Keeps the sign-in session fresh (verified locally where possible, so it's fast). If the auth service is slow or down, the request still goes through. */
 export async function proxy(request:NextRequest){
  let response=NextResponse.next({request});
  if(!process.env.NEXT_PUBLIC_SUPABASE_URL||!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)return response;
  try{
   const client=createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,{cookies:{getAll:()=>request.cookies.getAll(),setAll:values=>{values.forEach(({name,value})=>request.cookies.set(name,value));response=NextResponse.next({request});values.forEach(({name,value,options})=>response.cookies.set(name,value,options));}}});
   let timer:ReturnType<typeof setTimeout>|undefined;
-  await Promise.race([client.auth.getUser(),new Promise(resolve=>{timer=setTimeout(resolve,4000);})]).finally(()=>clearTimeout(timer));
+  await Promise.race([client.auth.getClaims(),new Promise(resolve=>{timer=setTimeout(resolve,4000);})]).finally(()=>clearTimeout(timer));
  }catch(err){console.error('[proxy] session refresh failed',err);}
  return response;
 }

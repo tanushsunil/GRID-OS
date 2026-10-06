@@ -1,6 +1,5 @@
 'use client';
 import {useEffect,useMemo,useRef,useState,type ComponentType} from 'react';
-import {useRouter} from 'next/navigation';
 import {Search,CornerDownLeft} from 'lucide-react';
 
 export type SearchItem={id:string;group:string;title:string;meta?:string;href:string;text:string;icon:ComponentType<{size?:number}>};
@@ -24,7 +23,7 @@ function Highlight({text,terms}:{text:string;terms:string[]}){
 }
 
 export default function CommandSearch({open,onClose,items}:{open:boolean;onClose:()=>void;items:SearchItem[]}){
- const router=useRouter();const [query,setQuery]=useState('');const [active,setActive]=useState(0);
+ const [query,setQuery]=useState('');const [active,setActive]=useState(0);
  const input=useRef<HTMLInputElement>(null);const list=useRef<HTMLDivElement>(null);
  const terms=useMemo(()=>query.toLowerCase().trim().split(/\s+/).filter(Boolean),[query]);
  const results=useMemo(()=>{
@@ -39,7 +38,7 @@ export default function CommandSearch({open,onClose,items}:{open:boolean;onClose
  useEffect(()=>{list.current?.querySelector('[aria-selected=true]')?.scrollIntoView({block:'nearest'});},[active]);
 
  if(!open)return null;
- const go=(item?:SearchItem)=>{if(!item)return;onClose();router.push(item.href);};
+ const go=(item?:SearchItem)=>{if(!item)return;onClose();(window.history.pushState(null,'',item.href),window.scrollTo(0,0));};
  const onKey=(e:React.KeyboardEvent)=>{
   if(e.key==='ArrowDown'){e.preventDefault();setActive(a=>Math.min(a+1,ordered.length-1));}
   else if(e.key==='ArrowUp'){e.preventDefault();setActive(a=>Math.max(a-1,0));}

@@ -1,11 +1,11 @@
-import {configured,supabase} from '@/lib/supabase';
+import {configured,supabase,currentUser} from '@/lib/supabase';
 import {z} from 'zod';
 import {reply,readJson,rateLimit,tooMany,failure} from '@/lib/api';
 const uuid=z.string().uuid();
 export async function POST(request:Request){
  if(!configured())return reply({error:'Database is not connected.'},503);
  try{
- const body=await readJson(request,16*1024);const db=await supabase();const {data:{user}}=await db.auth.getUser();
+ const body=await readJson(request,16*1024);const db=await supabase();const user=await currentUser(db);
  if(!user)return reply({error:'Please sign in.'},401);
  const limited=rateLimit('write:'+user.id,120,60_000);if(!limited.ok)return tooMany(limited.retryAfter);
  let result;
