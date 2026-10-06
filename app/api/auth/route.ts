@@ -52,7 +52,12 @@ export async function POST(request:Request){
     const {error}=await db.auth.signInWithPassword({email:address,password:secret});
     if(error?.code==='email_not_confirmed')return reply({error:'This account hasn’t been confirmed yet. Open the link in your confirmation email, or ask your admin to confirm it.'},400);
     if(error?.code==='over_request_rate_limit')return reply({error:SIGNUP_ERRORS.over_request_rate_limit},429);
-    if(error)return reply({error:SIGN_IN_FAILED},400);
+    if(error){
+     // Logged without the password, so the Vercel logs show why sign-in failed.
+     console.error('[auth] sign-in refused',error.code,error.status,error.message);
+     if(error.code!=='invalid_credentials'&&(error.status===undefined||error.status>=500||error.status===401||error.status===403))return reply({error:'Sign-in isn’t working on the server right now (check the Supabase keys in Vercel). Your password wasn’t the problem.'},503);
+     return reply({error:SIGN_IN_FAILED},400);
+    }
     return reply({ok:true});
    }
    case 'signup':{
