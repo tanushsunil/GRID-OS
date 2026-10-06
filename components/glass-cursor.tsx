@@ -4,16 +4,17 @@ import {useEffect,useRef,useState} from 'react';
 /*
  * Liquid-glass cursor — iPadOS pointer behaviour, reinterpreted as a small volume of liquid glass.
  *
- * Default: a soft circle with mass (spring follow, never sluggish).
+ * Default: a soft circle of viscous liquid: it flows after the pointer and stretches along its path.
  * Magnetic field: within MAGNET px of an interactive element the glass drifts toward it and reaches
  * out like a droplet; over it, the glass merges into the element's shape (rounded rectangle or
- * circle). Leaving, it detaches, contracts with a small overshoot and settles back into a circle.
+ * circle). Leaving, it detaches and draws itself back into a circle, like surface tension pulling a drop round.
  * Moving between neighbouring controls, it flows from one shape into the next instead of resetting.
  * Material: real backdrop refraction where supported — an SVG lens displacement sized to the glass
  * and fixed in pixels, so the bend is the same gentle amount at every size, with slight chromatic
  * dispersion only at the rim and an optically flat centre so labels stay crisp — plus inner
  * highlights, rim reflections and a specular highlight that slides against the motion.
- * Every parameter is a damped spring, so all state changes interpolate continuously.
+ * Motion is fluid, not springy: every parameter follows a critically damped (viscous) curve that eases out
+ * and never overshoots or bounces back, so all state changes flow continuously.
  *
  * Mouse/trackpad only. Off by default: only runs once the cursor toggle is switched on (html[data-cursor=on]), and never on touch screens. With
  * "reduce motion", positions and shapes follow without stretch, overshoot or nudging.
@@ -29,8 +30,15 @@ const DOT=20,MAGNET=54,MAX_W=560,MAX_H=280;
 
 type Spring={x:number;v:number;t:number};
 const spring=(x=0):Spring=>({x,v:0,t:x});
-/** Semi-implicit Euler damped spring. k: stiffness (1/s²), c: damping (1/s). */
-const step=(s:Spring,k:number,c:number,dt:number)=>{s.v+=((s.t-s.x)*k-s.v*c)*dt;s.x+=s.v*dt;return Math.abs(s.t-s.x)>0.005||Math.abs(s.v)>0.005;};
+/** Viscous follow: a critically damped approach to the target (exact, frame-rate independent). It eases out and
+ *  carries momentum like a liquid, but can never overshoot, so nothing bounces. tau: response time in seconds. */
+const step=(s:Spring,tau:number,dt:number)=>{
+ const w=2/tau,x=w*dt,decay=1/(1+x+0.48*x*x+0.235*x*x*x);
+ const change=s.x-s.t,temp=(s.v+w*change)*dt;
+ s.v=(s.v-w*temp)*decay;let next=s.t+(change+temp)*decay;
+ if((change>0)===(next>s.t)||change===0){/* still approaching */}else{next=s.t;s.v=0;} // never pass the target
+ s.x=next;return Math.abs(s.t-s.x)>0.005||Math.abs(s.v)>0.005;
+};
 const smooth=(e0:number,e1:number,x:number)=>{const t=Math.min(1,Math.max(0,(x-e0)/(e1-e0)));return t*t*(3-2*t);};
 type Target={el:Element;r:DOMRect;radius:number;circle:boolean;solid:boolean};
 
@@ -95,7 +103,7 @@ export default function GlassCursor(){
   };
   const setNudge=(t:Target|null,x:number,y:number)=>{
    const target=t&&t.solid?t.el as HTMLElement:undefined;
-   if(nudged&&nudged.el!==target){const n=nudged;n.el.animate([{translate:`${n.x}px ${n.y}px`},{translate:'0px 0px'}],{duration:260,easing:'cubic-bezier(.2,.8,.2,1)'});n.el.style.removeProperty('translate');nudged=null;}
+   if(nudged&&nudged.el!==target){const n=nudged;n.el.animate([{translate:`${n.x}px ${n.y}px`},{translate:'0px 0px'}],{duration:300,easing:'cubic-bezier(.22,1,.36,1)'});n.el.style.removeProperty('translate');nudged=null;}
    if(!target||calm)return;nudged={el:target,x,y};target.style.translate=`${x.toFixed(2)}px ${y.toFixed(2)}px`;
   };
 
@@ -126,16 +134,19 @@ export default function GlassCursor(){
    let moving=false;
    if(calm){cx.x=tx;cy.x=ty;w.x=tw;h.x=th;rad.x=tr;cx.v=cy.v=0;sx.x=sy.x=0;merge.x=merge.t;}
    else{
-    moving=step(cx,inside?620:1150,inside?44:60,dt)||moving;moving=step(cy,inside?620:1150,inside?44:60,dt)||moving;
-    moving=step(w,520,36,dt)||moving;moving=step(h,520,36,dt)||moving;moving=step(rad,520,40,dt)||moving;
-    moving=step(merge,300,30,dt)||moving;
-    // stretch: direction of motion plus the droplet reach; underdamped so it compresses a touch when stopping
+    // position flows after the pointer; once merged it glides more slowly, like liquid settling into a mould
+    moving=step(cx,inside?0.09:0.045,dt)||moving;moving=step(cy,inside?0.09:0.045,dt)||moving;
+    // the shape morphs a beat behind the position, so the glass visibly flows into (and out of) each control
+    moving=step(w,0.13,dt)||moving;moving=step(h,0.13,dt)||moving;moving=step(rad,0.14,dt)||moving;
+    moving=step(merge,0.16,dt)||moving;
+    // stretch: elongates along the direction of travel plus the droplet's reach, then relaxes back with
+    // viscous drag (no compress-and-rebound)
     const vmax=inside?0.035:0.13,vs=Math.min(Math.hypot(cx.v,cy.v)/2800,vmax),vang=Math.atan2(cy.v,cx.v);
     sx.t=Math.cos(vang)*vs+reachX;sy.t=Math.sin(vang)*vs+reachY;
-    moving=step(sx,360,22,dt)||moving;moving=step(sy,360,22,dt)||moving;
-    moving=step(offX,500,34,dt)||moving;moving=step(offY,500,34,dt)||moving;
+    moving=step(sx,0.12,dt)||moving;moving=step(sy,0.12,dt)||moving;
+    moving=step(offX,0.1,dt)||moving;moving=step(offY,0.1,dt)||moving;
    }
-   moving=step(press,900,38,dt)||moving;moving=step(refr,260,24,dt)||moving;
+   moving=step(press,0.07,dt)||moving;moving=step(refr,0.18,dt)||moving;
    if(now-downAt>140){refr.t=0;offX.t=0;offY.t=0;}
 
    // write
