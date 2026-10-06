@@ -817,3 +817,10 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 :root[data-sidebar=collapsed] .sidebar :is(.profile,.control-row){width:42px}
 :root[data-sidebar=collapsed] .sidebar .module-switcher{border:1px solid transparent}
 :root[data-sidebar=collapsed] .sidebar .module-card{padding-left:3px}
+/* Sign in with GRID */
+.auth-or{display:flex;align-items:center;gap:12px;margin:18px 0 14px;color:var(--muted);font-size:12px}
+.auth-or::before,.auth-or::after{content:"";flex:1;height:1px;background:var(--border)}
+.auth-grid{width:100%;justify-content:center;gap:10px;min-height:46px;font-size:15px;font-weight:600}
+.auth-grid svg{border-radius:5px}
+.grid-code-box{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:var(--r-md);background:var(--hover);margin:4px 0}
+.grid-code-box code{font:600 20px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;flex:1;min-width:0}

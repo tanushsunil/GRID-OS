@@ -1,4 +1,5 @@
-import {configured,supabase,serviceClient} from '@/lib/supabase';
+import {configured,supabase,serviceClient,currentUser} from '@/lib/supabase';
+import {normaliseGridCode} from '@/lib/grid-code';
 import {LOGIN_ID,isEmailLike,normaliseLoginId} from '@/lib/login-id';
 import {reply,readJson,rateLimit,clientIp,tooMany,failure} from '@/lib/api';
 import {z} from 'zod';
@@ -20,7 +21,9 @@ const SIGNUP_ERRORS:Record<string,string>={
  unexpected_failure:'That login ID is taken. Choose another one.',
 };
 // Brute-force guards: per address, and per account being tried (so rotating addresses doesn't help).
-const LIMITS={login:[10,60_000],signup:[5,600_000],reset:[5,600_000],update:[10,600_000]} as const;
+const LIMITS={login:[10,60_000],code:[10,60_000],signup:[5,600_000],reset:[5,600_000],update:[10,600_000]} as const;
+const CODE_FAILED='That GRID number isn’t right. Check the six digits — you’ll find yours in Settings.';
+const NEEDS_SERVER_KEY='Sign in with GRID needs the server key (SUPABASE_SECRET_KEY) to be set on the server.';
 
 /** Turns a login ID or email into the account email. Null when it can't be resolved — callers answer generically. */
 async function resolveEmail(identifier:string){
@@ -35,7 +38,7 @@ async function resolveEmail(identifier:string){
 export async function POST(request:Request){
  if(!configured())return reply({error:'Connect Supabase to enable sign-in.'},503);
  try{
-  const body=await readJson(request,8*1024);const action=body.action as keyof typeof LIMITS|'logout';
+  const body=await readJson(request,8*1024);const action=body.action as keyof typeof LIMITS|'logout'|'code_status';
   if(action in LIMITS){
    const [limit,windowMs]=LIMITS[action as keyof typeof LIMITS];
    const who=String(body.identifier||body.email||'').trim().toLowerCase().slice(0,254);
@@ -67,6 +70,29 @@ export async function POST(request:Request){
      return reply({error:known[error.code??'']??`Sign-in was refused by the server (${error.code||error.status||'unknown'}: ${error.message}). Your password wasn’t the problem.`},error.status===429?429:503);
     }
     return reply({ok:true});
+   }
+   case 'code':{
+    // Sign in with a personal GRID code: find the account, then mint and immediately redeem a one-time
+    // sign-in token for it on the server (no email is sent), which sets the normal session cookies.
+    const service=serviceClient();if(!service)return reply({error:NEEDS_SERVER_KEY},503);
+    // six digits are guessable, so attempts are also capped across the whole site, not just per device
+    const all=rateLimit('code:all',60,60_000);if(!all.ok)return tooMany(all.retryAfter);
+    const canonical=normaliseGridCode(String(body.code??''));if(!canonical)return reply({error:CODE_FAILED},400);
+    const {data:address,error:lookup}=await service.rpc('login_code_email',{code:canonical});
+    if(lookup){console.error('[auth] code lookup failed',lookup.code,lookup.message);return reply({error:lookup.code==='PGRST202'?'Sign in with GRID isn’t set up on the database yet. Run supabase/migrations/007_login_codes.sql.':'Sign-in is unavailable right now. Please try again shortly.'},503);}
+    if(typeof address!=='string')return reply({error:CODE_FAILED},400);
+    const link=await service.auth.admin.generateLink({type:'magiclink',email:address});
+    const token_hash=link.data?.properties?.hashed_token;
+    if(link.error||!token_hash){console.error('[auth] code sign-in link failed',link.error?.code,link.error?.message);return reply({error:'Sign-in is unavailable right now. Please try again shortly.'},503);}
+    const {error}=await db.auth.verifyOtp({type:'magiclink',token_hash});
+    if(error){console.error('[auth] code sign-in failed',error.code,error.message);return reply({error:'Sign-in is unavailable right now. Please try again shortly.'},503);}
+    return reply({ok:true});
+   }
+   case 'code_status':{
+    if(!(await currentUser(db)))return reply({error:'Please sign in again.'},401);
+    const {data,error}=await db.rpc('my_login_code');
+    if(error){console.error('[auth] code status failed',error.code,error.message);return reply({code:null,available:false,setup:error.code!=='PGRST202'});}
+    return reply({code:typeof data==='string'?data:null,available:!!serviceClient(),setup:true});
    }
    case 'signup':{
     const creds=z.object({username:loginId.optional(),email,password}).parse({...body,username:body.username||undefined});
