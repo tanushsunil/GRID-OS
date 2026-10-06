@@ -5,7 +5,7 @@ import {z} from 'zod';
 const email=z.email().max(254);
 const password=z.string().min(8).max(128);
 const loginId=z.string().transform(normaliseLoginId).pipe(z.string().regex(LOGIN_ID));
-const SIGN_IN_FAILED='Unable to sign in. Check your login ID and password.';
+const SIGN_IN_FAILED='Unable to sign in. Check your email and password.';
 /** Explains auth-service refusals that don't reveal whether a particular account exists. */
 const SIGNUP_ERRORS:Record<string,string>={
  over_email_send_rate_limit:'Too many sign-up emails were sent recently. Wait about an hour, then try again — or ask your admin to confirm your account.',
@@ -56,13 +56,13 @@ export async function POST(request:Request){
     return reply({ok:true});
    }
    case 'signup':{
-    const creds=z.object({username:loginId,email,password}).parse(body);
+    const creds=z.object({username:loginId.optional(),email,password}).parse({...body,username:body.username||undefined});
     const service=serviceClient();
-    if(service){const {data}=await service.rpc('login_email',{login_id:creds.username});if(data)return reply({error:'That login ID is taken. Try another.',field:'username'},409);}
+    if(service&&creds.username){const {data}=await service.rpc('login_email',{login_id:creds.username});if(data)return reply({error:'That login ID is taken. Try another.',field:'username'},409);}
     // With the server key, accounts are created already confirmed and signed straight in, so sign-up never
     // depends on an email arriving. Set GRID_REQUIRE_EMAIL_CONFIRMATION=true to send confirmation emails instead.
     if(service&&process.env.GRID_REQUIRE_EMAIL_CONFIRMATION!=='true'){
-     const created=await service.auth.admin.createUser({email:creds.email,password:creds.password,email_confirm:true,user_metadata:{username:creds.username}});
+     const created=await service.auth.admin.createUser({email:creds.email,password:creds.password,email_confirm:true,user_metadata:creds.username?{username:creds.username}:{}});
      if(created.error){
       console.error('[auth] sign-up refused',created.error.code,created.error.message);
       const field=created.error.code==='unexpected_failure'?{field:'username'}:{};
@@ -71,7 +71,7 @@ export async function POST(request:Request){
      const {error}=await db.auth.signInWithPassword({email:creds.email,password:creds.password});
      return reply({confirmation:false,signedIn:!error});
     }
-    const {data,error}=await db.auth.signUp({email:creds.email,password:creds.password,options:{data:{username:creds.username},emailRedirectTo:new URL('/auth/callback',request.url).href}});
+    const {data,error}=await db.auth.signUp({email:creds.email,password:creds.password,options:{data:creds.username?{username:creds.username}:{},emailRedirectTo:new URL('/auth/callback',request.url).href}});
     if(error){
      console.error('[auth] sign-up refused',error.code,error.message);
      const field=error.code==='unexpected_failure'?{field:'username'}:{};
@@ -94,5 +94,5 @@ export async function POST(request:Request){
    }
    default:return reply({error:'Unknown action.'},400);
   }
- }catch(err){return failure(err,{invalid:'Check your details: a valid login ID or email, and a password of at least 8 characters.',fallback:'Sign-in is unavailable right now. Please try again shortly.'});}
+ }catch(err){return failure(err,{invalid:'Enter a valid email and a password of at least 8 characters.',fallback:'Sign-in is unavailable right now. Please try again shortly.'});}
 }

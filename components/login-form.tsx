@@ -1,14 +1,13 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {ArrowRight,Mail,AtSign,Lock,Eye,EyeOff,Clapperboard,Wallet,BarChart3,ArrowLeft,AlertTriangle,CheckCircle2,Info,Loader2,KeyRound} from 'lucide-react';
+import {ArrowRight,Mail,Lock,Eye,EyeOff,Clapperboard,Wallet,BarChart3,ArrowLeft,AlertTriangle,CheckCircle2,Info,Loader2,KeyRound} from 'lucide-react';
 import {GridLogo,LOGO} from './logo';
 import DisplayToggles from './display-toggles';
-import {LOGIN_ID,isEmailLike} from '@/lib/login-id';
-import {requestJson,RequestError} from '@/lib/http';
+import {requestJson} from '@/lib/http';
 
 export type AuthMode='login'|'signup'|'reset'|'update';
 type Notice={tone:'error'|'success'|'info';text:string}|null;
-type Field='identifier'|'username'|'email'|'password'|'confirm';
+type Field='email'|'password'|'confirm';
 
 const SECTIONS=[
  {key:'production',label:'Production',text:'Projects, shoots, crew and rental gear',icon:Clapperboard},
@@ -33,13 +32,13 @@ export function passwordStrength(p:string){
 
 export default function LoginForm({initialMode,demo,ready,linkError}:{initialMode:AuthMode;demo:boolean;ready:boolean;linkError:boolean}){
  const [mode,setMode]=useState<AuthMode>(initialMode);
- const [identifier,setIdentifier]=useState('');const [username,setUsername]=useState('');const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [confirm,setConfirm]=useState('');
+ const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [confirm,setConfirm]=useState('');
  const [show,setShow]=useState(false);const [caps,setCaps]=useState(false);const [busy,setBusy]=useState(false);
  const [errors,setErrors]=useState<Record<string,string>>({});
  const [notice,setNotice]=useState<Notice>(linkError?{tone:'error',text:'That link has expired or was already used. Request a new one below.'}:null);
- const refs={identifier:useRef<HTMLInputElement>(null),username:useRef<HTMLInputElement>(null),email:useRef<HTMLInputElement>(null),password:useRef<HTMLInputElement>(null),confirm:useRef<HTMLInputElement>(null)};
- const copy=COPY[mode];const strength=passwordStrength(password);const needsPassword=mode!=='reset';const needsEmail=mode==='signup'||mode==='reset';
- const firstField:Field=mode==='login'?'identifier':mode==='signup'?'username':mode==='reset'?'email':'password';
+ const refs={email:useRef<HTMLInputElement>(null),password:useRef<HTMLInputElement>(null),confirm:useRef<HTMLInputElement>(null)};
+ const copy=COPY[mode];const strength=passwordStrength(password);const needsPassword=mode!=='reset';const needsEmail=mode!=='update';
+ const firstField:Field=needsEmail?'email':'password';
  const enabled=ready&&!demo;
 
  useEffect(()=>{if(enabled)refs[firstField].current?.focus();},[mode,enabled]);
@@ -47,15 +46,13 @@ export default function LoginForm({initialMode,demo,ready,linkError}:{initialMod
  const capsCheck=(e:React.KeyboardEvent)=>setCaps(e.getModifierState?.('CapsLock')??false);
 
  const validate=()=>{
-  const e:Record<string,string>={};const id=identifier.trim();
-  if(mode==='login'){if(!id)e.identifier='Enter your login ID or email.';else if(isEmailLike(id)?!EMAIL.test(id):!LOGIN_ID.test(id.toLowerCase()))e.identifier=isEmailLike(id)?'Enter a valid email address.':'Login IDs are 3–30 letters, numbers, dots, dashes or underscores.';}
-  if(mode==='signup'&&!LOGIN_ID.test(username))e.username=username.length<3?'Choose a login ID of at least 3 characters.':'Use lowercase letters, numbers, . _ or -, starting and ending with a letter or number.';
+  const e:Record<string,string>={};
   if(needsEmail&&!EMAIL.test(email.trim()))e.email='Enter a valid email address.';
   if(needsPassword&&password.length<8)e.password='Use at least 8 characters.';
   if((mode==='signup'||mode==='update')&&password.length>=8&&strength.score<2)e.password='Make it stronger — add length, capitals, numbers or a symbol.';
   if((mode==='signup'||mode==='update')&&confirm!==password)e.confirm='Passwords don’t match.';
   setErrors(e);
-  const first=(['identifier','username','email','password','confirm'] as Field[]).find(k=>e[k]);if(first)refs[first].current?.focus();
+  const first=(['email','password','confirm'] as Field[]).find(k=>e[k]);if(first)refs[first].current?.focus();
   return !Object.keys(e).length;
  };
 
@@ -63,11 +60,9 @@ export default function LoginForm({initialMode,demo,ready,linkError}:{initialMod
   ev.preventDefault();if(!enabled||busy||!validate())return;
   setBusy(true);setNotice(null);
   try{
-   let data:any;
-   try{data=await requestJson('/api/auth',{body:{action:mode,identifier:identifier.trim(),username,email:email.trim(),password}});}
-   catch(err){if(err instanceof RequestError&&err.data?.field==='username'){setErrors({username:err.message});refs.username.current?.focus();return;}throw err;}
+   const data:any=await requestJson('/api/auth',{body:{action:mode,identifier:email.trim(),email:email.trim(),password}});
    if(mode==='login'){window.location.href='/';return;}
-   if(mode==='signup'){if(data.confirmation){setNotice({tone:'success',text:`Check ${email.trim()} for a confirmation link, then sign in as ${username}.`});setIdentifier(username);switchToKeepNotice('login');}else if(data.signedIn===false){setNotice({tone:'success',text:`Account created. Sign in as ${username}.`});setIdentifier(username);switchToKeepNotice('login');}else window.location.href='/';return;}
+   if(mode==='signup'){if(data.confirmation){setNotice({tone:'success',text:`Check ${email.trim()} for a confirmation link, then sign in.`});switchToKeepNotice('login');}else if(data.signedIn===false){setNotice({tone:'success',text:'Account created. Sign in with your email and password.'});switchToKeepNotice('login');}else window.location.href='/';return;}
    if(mode==='reset'){setNotice({tone:'success',text:`If an account exists for ${email.trim()}, a reset link is on its way. It expires in an hour.`});return;}
    if(mode==='update'){setNotice({tone:'success',text:'Password updated. Taking you to your workspace…'});setTimeout(()=>{window.location.href='/';},1200);return;}
   }catch(err){setNotice({tone:'error',text:(err as Error).message});}
@@ -124,9 +119,7 @@ export default function LoginForm({initialMode,demo,ready,linkError}:{initialMod
      {!ready&&<p className="auth-notice info" role="status"><Info size={16}/>Sign-in isn’t set up on this server yet. Ask your administrator to connect the database.</p>}
      {notice&&<p className={`auth-notice ${notice.tone}`} role={notice.tone==='error'?'alert':'status'}><NoticeIcon size={16}/>{notice.text}</p>}
      <form className="auth-form" onSubmit={submit} noValidate>
-      {mode==='login'&&field('identifier',{label:'Login ID',icon:AtSign,value:identifier,set:setIdentifier,type:'text',autoComplete:'username',placeholder:'Username or email',plain:true})}
-      {mode==='signup'&&field('username',{label:'Login ID',icon:AtSign,value:username,set:v=>setUsername(v.toLowerCase().replace(/\s/g,'')),type:'text',autoComplete:'username',placeholder:'e.g. alex',hint:'You’ll use this to sign in. 3–30 letters, numbers, . _ or -',plain:true})}
-      {needsEmail&&field('email',{label:'Email',icon:Mail,value:email,set:setEmail,type:'email',autoComplete:'email',placeholder:'you@studio.com',hint:mode==='signup'?'Used for password resets.':undefined,plain:true})}
+      {needsEmail&&field('email',{label:'Email',icon:Mail,value:email,set:setEmail,type:'email',autoComplete:'email',placeholder:'you@studio.com',plain:true})}
       {needsPassword&&field('password',{label:mode==='update'?'New password':'Password',icon:Lock,value:password,set:setPassword,type:show?'text':'password',autoComplete:mode==='login'?'current-password':'new-password',
        trailing:<button type="button" className="auth-eye" onClick={()=>setShow(s=>!s)} aria-label={show?'Hide password':'Show password'} aria-pressed={show} disabled={!enabled}>{show?<EyeOff size={16}/>:<Eye size={16}/>}</button>})}
       {needsPassword&&caps&&<p className="auth-caps"><AlertTriangle size={13}/>Caps Lock is on</p>}
