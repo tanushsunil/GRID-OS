@@ -15,7 +15,7 @@ import {useEffect,useRef,useState} from 'react';
  * highlights, rim reflections and a specular highlight that slides against the motion.
  * Every parameter is a damped spring, so all state changes interpolate continuously.
  *
- * Mouse/trackpad only. Off on touch screens and when the cursor toggle is off (html[data-cursor=off]). With
+ * Mouse/trackpad only. Off by default: only runs once the cursor toggle is switched on (html[data-cursor=on]), and never on touch screens. With
  * "reduce motion", positions and shapes follow without stretch, overshoot or nudging.
  */
 const TARGETS=[
@@ -49,7 +49,7 @@ export default function GlassCursor(){
  const root=useRef<HTMLDivElement>(null);const [enabled,setEnabled]=useState(false);const [map,setMap]=useState('');
  useEffect(()=>{
   const fine=window.matchMedia('(hover: hover) and (pointer: fine)');const html=document.documentElement;
-  const update=()=>setEnabled(fine.matches&&html.dataset.cursor!=='off');
+  const update=()=>setEnabled(fine.matches&&html.dataset.cursor==='on');
   update();fine.addEventListener('change',update);
   const watch=new MutationObserver(update);watch.observe(html,{attributes:true,attributeFilter:['data-cursor']});
   return()=>{fine.removeEventListener('change',update);watch.disconnect();};
