@@ -6,6 +6,17 @@ const email=z.email().max(254);
 const password=z.string().min(8).max(128);
 const loginId=z.string().transform(normaliseLoginId).pipe(z.string().regex(LOGIN_ID));
 const SIGN_IN_FAILED='Unable to sign in. Check your login ID and password.';
+/** Explains auth-service refusals that don't reveal whether a particular account exists. */
+const SIGNUP_ERRORS:Record<string,string>={
+ over_email_send_rate_limit:'Too many sign-up emails were sent recently. Wait about an hour, then try again — or ask your admin to confirm your account.',
+ over_request_rate_limit:'Too many attempts. Please wait a few minutes and try again.',
+ email_address_not_authorized:'This server can’t send email to that address yet. Ask your admin to set up email sending or confirm your account.',
+ email_address_invalid:'That email address can’t be used. Try a different one.',
+ weak_password:'That password is too easy to guess. Choose a longer one with a mix of characters.',
+ signup_disabled:'New accounts are turned off for this workspace. Ask your admin for access.',
+ email_provider_disabled:'New accounts are turned off for this workspace. Ask your admin for access.',
+ unexpected_failure:'That login ID is taken. Choose another one.',
+};
 // Brute-force guards: per address, and per account being tried (so rotating addresses doesn't help).
 const LIMITS={login:[10,60_000],signup:[5,600_000],reset:[5,600_000],update:[10,600_000]} as const;
 
@@ -37,6 +48,8 @@ export async function POST(request:Request){
     // Unknown login IDs and wrong passwords get the same answer, so the form never reveals who has an account.
     if(!address)return reply({error:SIGN_IN_FAILED},400);
     const {error}=await db.auth.signInWithPassword({email:address,password:secret});
+    if(error?.code==='email_not_confirmed')return reply({error:'Confirm your email first: open the link we sent, then sign in.'},400);
+    if(error?.code==='over_request_rate_limit')return reply({error:SIGNUP_ERRORS.over_request_rate_limit},429);
     if(error)return reply({error:SIGN_IN_FAILED},400);
     return reply({ok:true});
    }
@@ -45,7 +58,11 @@ export async function POST(request:Request){
     const service=serviceClient();
     if(service){const {data}=await service.rpc('login_email',{login_id:creds.username});if(data)return reply({error:'That login ID is taken. Try another.',field:'username'},409);}
     const {data,error}=await db.auth.signUp({email:creds.email,password:creds.password,options:{data:{username:creds.username},emailRedirectTo:new URL('/auth/callback',request.url).href}});
-    if(error)return reply({error:'Unable to register. That login ID may be taken, or try signing in.'},400);
+    if(error){
+     console.error('[auth] sign-up refused',error.code,error.message);
+     const field=error.code==='unexpected_failure'?{field:'username'}:{};
+     return reply({error:SIGNUP_ERRORS[error.code??'']??'Unable to create the account. If you’ve signed up before, use Sign in instead.',...field},error.status===429?429:400);
+    }
     return reply({confirmation:!data.session});
    }
    case 'reset':{

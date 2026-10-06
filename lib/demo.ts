@@ -65,7 +65,7 @@ export function loadDemo(storage:Pick<Storage,'getItem'|'setItem'>):{state:any;r
  let text:string|null=null;try{text=storage.getItem(DEMO_KEY);}catch{return {state:migrateDemo(null),recovered:false};}
  if(!text)return {state:migrateDemo(null),recovered:false};
  try{const parsed=JSON.parse(text);if(!parsed||typeof parsed!=='object'||!parsed.workspace||!parsed.user)throw Error('Invalid demo workspace');return {state:migrateDemo(parsed),recovered:false};}
- catch{try{storage.setItem(`${DEMO_KEY}-corrupt-${Date.now()}`,text);}catch{}pruneCorrupt(storage as Storage);return {state:migrateDemo(null),recovered:true};}
+ catch{try{storage.setItem(`${DEMO_KEY}-corrupt-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,text);}catch{}pruneCorrupt(storage as Storage);return {state:migrateDemo(null),recovered:true};}
 }
 /** Keep only the newest few set-aside copies of unreadable data. */
 function pruneCorrupt(storage:Storage){
