@@ -67,7 +67,7 @@ export default function LoginForm({initialMode,demo,ready,linkError}:{initialMod
    try{data=await requestJson('/api/auth',{body:{action:mode,identifier:identifier.trim(),username,email:email.trim(),password}});}
    catch(err){if(err instanceof RequestError&&err.data?.field==='username'){setErrors({username:err.message});refs.username.current?.focus();return;}throw err;}
    if(mode==='login'){window.location.href='/';return;}
-   if(mode==='signup'){if(data.confirmation){setNotice({tone:'success',text:`Check ${email.trim()} for a confirmation link, then sign in as ${username}.`});setIdentifier(username);switchToKeepNotice('login');}else window.location.href='/';return;}
+   if(mode==='signup'){if(data.confirmation){setNotice({tone:'success',text:`Check ${email.trim()} for a confirmation link, then sign in as ${username}.`});setIdentifier(username);switchToKeepNotice('login');}else if(data.signedIn===false){setNotice({tone:'success',text:`Account created. Sign in as ${username}.`});setIdentifier(username);switchToKeepNotice('login');}else window.location.href='/';return;}
    if(mode==='reset'){setNotice({tone:'success',text:`If an account exists for ${email.trim()}, a reset link is on its way. It expires in an hour.`});return;}
    if(mode==='update'){setNotice({tone:'success',text:'Password updated. Taking you to your workspace…'});setTimeout(()=>{window.location.href='/';},1200);return;}
   }catch(err){setNotice({tone:'error',text:(err as Error).message});}
@@ -126,7 +126,7 @@ export default function LoginForm({initialMode,demo,ready,linkError}:{initialMod
      <form className="auth-form" onSubmit={submit} noValidate>
       {mode==='login'&&field('identifier',{label:'Login ID',icon:AtSign,value:identifier,set:setIdentifier,type:'text',autoComplete:'username',placeholder:'Username or email',plain:true})}
       {mode==='signup'&&field('username',{label:'Login ID',icon:AtSign,value:username,set:v=>setUsername(v.toLowerCase().replace(/\s/g,'')),type:'text',autoComplete:'username',placeholder:'e.g. alex',hint:'You’ll use this to sign in. 3–30 letters, numbers, . _ or -',plain:true})}
-      {needsEmail&&field('email',{label:'Email',icon:Mail,value:email,set:setEmail,type:'email',autoComplete:'email',placeholder:'you@studio.com',hint:mode==='signup'?'Used for confirmation and password resets.':undefined,plain:true})}
+      {needsEmail&&field('email',{label:'Email',icon:Mail,value:email,set:setEmail,type:'email',autoComplete:'email',placeholder:'you@studio.com',hint:mode==='signup'?'Used for password resets.':undefined,plain:true})}
       {needsPassword&&field('password',{label:mode==='update'?'New password':'Password',icon:Lock,value:password,set:setPassword,type:show?'text':'password',autoComplete:mode==='login'?'current-password':'new-password',
        trailing:<button type="button" className="auth-eye" onClick={()=>setShow(s=>!s)} aria-label={show?'Hide password':'Show password'} aria-pressed={show} disabled={!enabled}>{show?<EyeOff size={16}/>:<Eye size={16}/>}</button>})}
       {needsPassword&&caps&&<p className="auth-caps"><AlertTriangle size={13}/>Caps Lock is on</p>}

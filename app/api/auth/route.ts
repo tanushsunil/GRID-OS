@@ -15,6 +15,8 @@ const SIGNUP_ERRORS:Record<string,string>={
  weak_password:'That password is too easy to guess. Choose a longer one with a mix of characters.',
  signup_disabled:'New accounts are turned off for this workspace. Ask your admin for access.',
  email_provider_disabled:'New accounts are turned off for this workspace. Ask your admin for access.',
+ email_exists:'An account with this email already exists. Use Sign in instead.',
+ user_already_exists:'An account with this email already exists. Use Sign in instead.',
  unexpected_failure:'That login ID is taken. Choose another one.',
 };
 // Brute-force guards: per address, and per account being tried (so rotating addresses doesn't help).
@@ -48,7 +50,7 @@ export async function POST(request:Request){
     // Unknown login IDs and wrong passwords get the same answer, so the form never reveals who has an account.
     if(!address)return reply({error:SIGN_IN_FAILED},400);
     const {error}=await db.auth.signInWithPassword({email:address,password:secret});
-    if(error?.code==='email_not_confirmed')return reply({error:'Confirm your email first: open the link we sent, then sign in.'},400);
+    if(error?.code==='email_not_confirmed')return reply({error:'This account hasn’t been confirmed yet. Open the link in your confirmation email, or ask your admin to confirm it.'},400);
     if(error?.code==='over_request_rate_limit')return reply({error:SIGNUP_ERRORS.over_request_rate_limit},429);
     if(error)return reply({error:SIGN_IN_FAILED},400);
     return reply({ok:true});
@@ -57,6 +59,18 @@ export async function POST(request:Request){
     const creds=z.object({username:loginId,email,password}).parse(body);
     const service=serviceClient();
     if(service){const {data}=await service.rpc('login_email',{login_id:creds.username});if(data)return reply({error:'That login ID is taken. Try another.',field:'username'},409);}
+    // With the server key, accounts are created already confirmed and signed straight in, so sign-up never
+    // depends on an email arriving. Set GRID_REQUIRE_EMAIL_CONFIRMATION=true to send confirmation emails instead.
+    if(service&&process.env.GRID_REQUIRE_EMAIL_CONFIRMATION!=='true'){
+     const created=await service.auth.admin.createUser({email:creds.email,password:creds.password,email_confirm:true,user_metadata:{username:creds.username}});
+     if(created.error){
+      console.error('[auth] sign-up refused',created.error.code,created.error.message);
+      const field=created.error.code==='unexpected_failure'?{field:'username'}:{};
+      return reply({error:SIGNUP_ERRORS[created.error.code??'']??'Unable to create the account. If you’ve signed up before, use Sign in instead.',...field},400);
+     }
+     const {error}=await db.auth.signInWithPassword({email:creds.email,password:creds.password});
+     return reply({confirmation:false,signedIn:!error});
+    }
     const {data,error}=await db.auth.signUp({email:creds.email,password:creds.password,options:{data:{username:creds.username},emailRedirectTo:new URL('/auth/callback',request.url).href}});
     if(error){
      console.error('[auth] sign-up refused',error.code,error.message);
