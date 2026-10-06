@@ -55,8 +55,16 @@ export async function POST(request:Request){
     if(error){
      // Logged without the password, so the Vercel logs show why sign-in failed.
      console.error('[auth] sign-in refused',error.code,error.status,error.message);
-     if(error.code!=='invalid_credentials'&&(error.status===undefined||error.status>=500||error.status===401||error.status===403))return reply({error:'Sign-in isn’t working on the server right now (check the Supabase keys in Vercel). Your password wasn’t the problem.'},503);
-     return reply({error:SIGN_IN_FAILED},400);
+     if(error.code==='invalid_credentials')return reply({error:SIGN_IN_FAILED},400);
+     // Anything else is a setup problem, not a wrong password — say so, with Supabase's reason.
+     const known:Record<string,string>={
+      captcha_failed:'Supabase CAPTCHA protection is blocking sign-in. Turn it off in Supabase → Authentication → Attack Protection, or add CAPTCHA to this app.',
+      email_provider_disabled:'Email sign-in is switched off in Supabase. Turn it on in Authentication → Sign In / Providers → Email.',
+      provider_disabled:'Email sign-in is switched off in Supabase. Turn it on in Authentication → Sign In / Providers → Email.',
+      user_banned:'This account has been suspended. Ask your admin.',
+      over_request_rate_limit:'Too many attempts. Please wait a few minutes and try again.',
+     };
+     return reply({error:known[error.code??'']??`Sign-in was refused by the server (${error.code||error.status||'unknown'}: ${error.message}). Your password wasn’t the problem.`},error.status===429?429:503);
     }
     return reply({ok:true});
    }
