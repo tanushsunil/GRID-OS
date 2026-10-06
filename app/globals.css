@@ -755,3 +755,8 @@ html.lg-cursor-on input:not([type=checkbox]):not([type=radio]):not([type=range])
 .import-done{display:grid;justify-items:center;gap:8px;text-align:center;padding:30px 10px;color:var(--green)}.import-done h3{color:var(--text)}.import-done p{color:var(--muted);margin:0}
 .notice.info{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:12px;font-size:13px;background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--text)}
 @media(max-width:700px){.import-map-row{grid-template-columns:1fr 1fr}.import-sample{display:none}.import-summary strong{font-size:20px}}
+/* Dark mode: a subtler background glow, so black stays dominant (about 40% less colour) */
+:root[data-theme=dark]{--glow-1:rgba(226,86,13,.18);--glow-2:rgba(255,130,50,.08);--glow-3:rgba(226,86,13,.08)}
+:root[data-theme=dark][data-section=finance]{--glow-1:rgba(25,158,112,.17);--glow-2:rgba(79,210,155,.07);--glow-3:rgba(25,158,112,.07)}
+:root[data-theme=dark][data-section=data]{--glow-1:rgba(57,135,229,.17);--glow-2:rgba(120,169,255,.07);--glow-3:rgba(57,135,229,.07)}
+:root[data-theme=dark] .home-glow{background:radial-gradient(1100px 760px at 50% 18%,color-mix(in srgb,var(--glow-color) 13%,transparent),transparent 65%),radial-gradient(900px 700px at 8% 0%,color-mix(in srgb,var(--glow-color) 11%,transparent),transparent 60%),radial-gradient(900px 700px at 96% 100%,color-mix(in srgb,var(--glow-color) 7%,transparent),transparent 60%),var(--bg)}
