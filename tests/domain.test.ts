@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {totals,invoiceState,emptyData,rentalCost,rentalDays} from '../lib/domain';
+import {totals,invoiceState,rentalCost,rentalDays} from '../lib/domain';
 import {recordSchema} from '../lib/validation';
 import {demoWorkspace,demoAction,validateDemoSave} from '../lib/demo';
 test('money: discount allocation and per-line tax rounding',()=>{assert.deepEqual(totals([{service:'Film',description:'',quantity:2,rate:15000,tax:18},{service:'Photo',description:'',quantity:1,rate:10000,tax:5}],4000),{subtotal:40000,discount:4000,tax:5310,total:41310});assert.equal(totals([{service:'A',description:'',quantity:3,rate:0.1,tax:0}]).total,0.3);});

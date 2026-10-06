@@ -3,7 +3,7 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import dynamic from 'next/dynamic';
-import {Upload,WifiOff,LayoutDashboard,FolderKanban,Clapperboard,Users,Contact,FileText,Receipt,Wallet,CalendarDays,Settings,Search,Plus,ChevronRight,ChevronLeft,Moon,LogOut,Menu,X,ArrowUpRight,Clock,MapPin,CheckCircle2,AlertCircle,List,Columns3,Pencil,Trash2,RefreshCw,Check,PanelLeftClose,PanelLeftOpen,Package,Activity as ActivityIcon,CalendarPlus,Download,ClipboardList,LayoutTemplate,Mail,Camera,Bookmark,BarChart3,Table2,Lock,LayoutGrid,ArrowRight} from 'lucide-react';
+import {Upload,WifiOff,LayoutDashboard,FolderKanban,Clapperboard,Users,Contact,FileText,Receipt,Wallet,CalendarDays,Settings,Search,Plus,ChevronRight,ChevronLeft,LogOut,Menu,X,ArrowUpRight,Clock,MapPin,CheckCircle2,AlertCircle,List,Columns3,Pencil,Trash2,RefreshCw,Check,PanelLeftClose,PanelLeftOpen,Package,Activity as ActivityIcon,CalendarPlus,Download,ClipboardList,LayoutTemplate,Mail,Camera,Bookmark,BarChart3,Table2,Lock,LayoutGrid,ArrowRight} from 'lucide-react';
 import {entities,emptyData,fields,titles,singular,statuses,money,today,displayDate,totals,invoiceState,invoiceStates,nextNumber,terminal,blankItem,rentalCost,rentalDays,type Entity,type Row,type Data} from '@/lib/domain';
 import {demoAction,validateDemoSave,migrateDemo,loadDemo,saveDemo,backupFile,readBackup,demoImport,MAX_ACTIVITY,DEMO_KEY} from '@/lib/demo';
 import {exportTable,importKinds,type ImportKind,type ImportPlan} from '@/lib/import';
