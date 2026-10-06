@@ -65,7 +65,18 @@ export default function Workspace({demo}:{demo:boolean}){
  // Export menus close on an outside click or Esc.
  useEffect(()=>{const close=(e:Event)=>{document.querySelectorAll<HTMLDetailsElement>('details.export-menu[open]').forEach(d=>{if(e instanceof KeyboardEvent?e.key==='Escape':!d.contains(e.target as Node))d.open=false;});};document.addEventListener('pointerdown',close);document.addEventListener('keydown',close);return()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',close);};},[]);
  useEffect(()=>{const update=()=>setOffline(!navigator.onLine);update();window.addEventListener('online',update);window.addEventListener('offline',update);return()=>{window.removeEventListener('online',update);window.removeEventListener('offline',update);};},[]);
- const toggleSidebar=()=>setCollapsed(c=>{const next=!c;document.documentElement.dataset.sidebar=next?'collapsed':'expanded';savePref('grid-sidebar',next?'collapsed':'expanded');return next;});
+ /** Collapse/expand the sidebar as one fluid movement: the rail eases (CSS) and the few items that
+  *  rearrange (bottom controls) glide from where they were to where they land, on the same curve. */
+ const toggleSidebar=()=>{
+  const html=document.documentElement;const next=html.dataset.sidebar!=='collapsed';
+  const movers=[...document.querySelectorAll<HTMLElement>('.sidebar .sidebar-bottom>a,.sidebar .cc-tile,.sidebar .profile .avatar,.sidebar .profile>button')];
+  const before=movers.map(e=>e.getBoundingClientRect());
+  html.dataset.sidebar=next?'collapsed':'expanded';savePref('grid-sidebar',next?'collapsed':'expanded');setCollapsed(next);
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const cs=getComputedStyle(html);const ms=parseFloat(cs.getPropertyValue('--dur-layout'))*1000||550;const easing=cs.getPropertyValue('--ease-out').trim()||'ease-out';
+  movers.forEach((e,i)=>{const a=e.getBoundingClientRect(),b=before[i];const dx=b.left-a.left,dy=b.top-a.top;if(Math.abs(dx)+Math.abs(dy)<0.5)return;
+   e.animate([{translate:`${dx}px ${dy}px`},{translate:'0px 0px'}],{duration:ms,easing});});
+ };
  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='b'&&!(e.target instanceof Element&&e.target.closest('input,textarea,select,[contenteditable]'))){e.preventDefault();toggleSidebar();}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[]);
  useEffect(()=>{const onKey=(e:KeyboardEvent)=>{const typing=!!(e.target instanceof Element&&e.target.closest('input,textarea,select,[contenteditable]'));if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setSearchOpen(o=>!o);}else if(e.key==='/'&&!typing&&!e.metaKey&&!e.ctrlKey){e.preventDefault();setSearchOpen(true);}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey);},[]);
  useEffect(()=>{const m=pageModule[page];if(m){setLastModule(m);try{localStorage.setItem('grid-module',m);}catch{}}},[page]);

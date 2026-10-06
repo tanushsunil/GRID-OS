@@ -648,7 +648,6 @@ html.lg-cursor-on input:not([type=checkbox]):not([type=radio]):not([type=range])
 .home-controls{padding:0}
 .home-controls .cc-tile{width:38px;height:38px}
 :root[data-sidebar=collapsed] .sidebar .control-row{flex-direction:column;align-items:center;gap:8px;padding:6px 0}
-:root[data-sidebar=collapsed] .sidebar .cc-tile{width:38px;height:38px}
 @media (prefers-reduced-transparency:reduce){.cc-tile{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--surface)}.cc-tile.on{background:var(--accent)}}
 /* ===== Sign-in ===== */
 .auth-shell{position:relative;min-height:100vh;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:24px;padding:24px}
@@ -778,3 +777,48 @@ dialog.modal[open]{animation:sheet-in var(--dur-medium) var(--ease-out)}
 dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-out)}
 .export-menu[open] .export-options{animation:menu-in var(--dur-fast) var(--ease-out);transform-origin:top right}
 .view-error,.import-done{animation:rise-in var(--dur-medium) var(--ease-out)}
+/* ===== Fluid motion: the glass cursor's viscous curve, used by every animation =====
+   A critically damped response — fast start, long gentle glide, never overshoots or bounces.
+   Older browsers keep the cubic-bezier ease-out above. */
+@supports (transition-timing-function:linear(0,1)){
+ :root{--ease-out:linear(0 0%,.015 2%,.0532 4%,.1065 6%,.1686 8%,.2351 10%,.3027 12%,.4017 15%,.4935 18%,.5759 21%,.6698 25%,.7628 30%,.8322 35%,.8829 40%,.925 46%,.9562 53%,.9749 60%,.9891 70%,.9957 80%,.9987 90%,1 100%);
+  --dur-fast:.3s;--dur-medium:.45s;--dur-layout:.55s;--dur-slow:.7s}
+}
+
+/* ===== Sidebar collapse: one continuous movement, nothing snaps =====
+   Text fades instead of vanishing; icons sit on a fixed 36px line (the rail's centre) so the rail
+   closes over them; elements that must move glide by padding, size or (in JS) transform. */
+.sidebar :is(.nav-text,.sidebar-text,.version,.nav-count,.nav-label,.profile>div){transition:opacity var(--dur-fast) var(--ease-out),visibility 0s linear 0s}
+:root[data-sidebar=collapsed] .sidebar :is(.nav-text,.sidebar-text,.version,.nav-count,.profile>div){display:revert;position:static;width:auto;height:auto;clip:auto;opacity:0;visibility:hidden;transition:opacity calc(var(--dur-fast)*.6) var(--ease-out),visibility 0s linear calc(var(--dur-fast)*.6)}
+:root[data-sidebar=collapsed] .sidebar .nav-label{font-size:10px;height:auto;margin:0 0 7px;background:none;padding:0 12px;opacity:0;visibility:hidden}
+:root[data-sidebar=collapsed] .sidebar .module-grid{display:none}
+:root[data-sidebar=collapsed] .sidebar :is(.nav-group a,.sidebar-bottom>a,.sidebar-bottom>button){justify-content:flex-start;padding:9px 12px 9px 15px}
+.sidebar :is(.nav-group a,.sidebar-bottom>a){transition:padding var(--dur-layout) var(--ease-out),background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out)}
+:root[data-sidebar=collapsed] .sidebar .brand{padding:0 0 0 3px}
+:root[data-sidebar=collapsed] .sidebar .workspace-selector{padding-left:17.6px}
+:root[data-sidebar=collapsed] .sidebar .module-card{padding-left:7px}
+.sidebar :is(.brand,.workspace-selector,.module-switcher,.module-card){transition:padding var(--dur-layout) var(--ease-out),margin var(--dur-layout) var(--ease-out),border-color var(--dur-layout) var(--ease-out),background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out)}
+.sidebar .brand-symbol{transition:width var(--dur-layout) var(--ease-out),height var(--dur-layout) var(--ease-out),margin var(--dur-layout) var(--ease-out)}
+:root[data-sidebar=collapsed] .sidebar :is(.brand,.workspace-selector,.module-card){justify-content:flex-start}
+.sidebar .profile>button{transition:none}
+/* The bottom area keeps fixed-width boxes so its items don't drift with the animating rail width;
+   the tiles, avatar and sign-out glide to their new places (see toggleSidebar). */
+.sidebar{--sb-w:226px}
+@media(max-width:1200px){.sidebar{--sb-w:205px}}
+.sidebar .profile{position:relative;width:calc(var(--sb-w) - 30px);box-sizing:border-box}
+:root[data-sidebar=collapsed] .sidebar .profile{width:48px;padding-left:0;padding-right:0;align-items:center}
+:root[data-sidebar=collapsed] .sidebar .profile>div{position:absolute;left:58px;top:18px;pointer-events:none}
+:root[data-sidebar=collapsed] .sidebar .control-row{width:48px;align-items:center;padding-left:0;padding-right:0}
+@media(max-width:700px){.sidebar .profile{width:auto}}
+.sidebar .cc-tile{flex-shrink:0}
+.sidebar .control-row{width:calc(var(--sb-w) - 30px);box-sizing:border-box}
+@media(max-width:700px){.sidebar .control-row{width:auto}}
+/* Keep the rail's inner spacing constant (15px) while collapsing, so nothing drifts at the start */
+:root[data-sidebar=collapsed] .sidebar{padding-left:15px;padding-right:15px}
+:root[data-sidebar=collapsed] .sidebar :is(.nav-group a,.sidebar-bottom>a,.sidebar-bottom>button){padding:9px 12px}
+:root[data-sidebar=collapsed] .sidebar .brand{padding:0}
+:root[data-sidebar=collapsed] .sidebar .workspace-selector{padding-left:14.6px}
+:root[data-sidebar=collapsed] .sidebar .module-card{padding-left:4px}
+:root[data-sidebar=collapsed] .sidebar :is(.profile,.control-row){width:42px}
+:root[data-sidebar=collapsed] .sidebar .module-switcher{border:1px solid transparent}
+:root[data-sidebar=collapsed] .sidebar .module-card{padding-left:3px}
