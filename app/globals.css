@@ -760,3 +760,8 @@ html.lg-cursor-on input:not([type=checkbox]):not([type=radio]):not([type=range])
 :root[data-theme=dark][data-section=finance]{--glow-1:rgba(25,158,112,.17);--glow-2:rgba(79,210,155,.07);--glow-3:rgba(25,158,112,.07)}
 :root[data-theme=dark][data-section=data]{--glow-1:rgba(57,135,229,.17);--glow-2:rgba(120,169,255,.07);--glow-3:rgba(57,135,229,.07)}
 :root[data-theme=dark] .home-glow{background:radial-gradient(1100px 760px at 50% 18%,color-mix(in srgb,var(--glow-color) 13%,transparent),transparent 65%),radial-gradient(900px 700px at 8% 0%,color-mix(in srgb,var(--glow-color) 11%,transparent),transparent 60%),radial-gradient(900px 700px at 96% 100%,color-mix(in srgb,var(--glow-color) 7%,transparent),transparent 60%),var(--bg)}
+/* Dark mode: softer glass edges and dividers (about 40% fainter) */
+:root[data-theme=dark]{--glass-line:rgba(255,255,255,.05);--glass-divider:rgba(255,255,255,.04);--border:#202020}
+:root[data-theme=dark]:not([data-glass=off]) .notification-panel{border-color:rgba(255,255,255,.07);box-shadow:0 30px 70px -20px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08),inset 0 0 0 1px rgba(255,255,255,.02)}
+:root[data-theme=dark]:not([data-glass=off]) :is(.notification-head,.notification-foot){border-color:rgba(255,255,255,.06)}
+:root[data-theme=dark] .cc-tile:not(.on){border-color:rgba(255,255,255,.1);box-shadow:0 0 0 .5px rgba(0,0,0,.5),0 10px 20px -10px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.14),inset 0 -1.5px 3px rgba(0,0,0,.35),inset 0 0 10px rgba(255,255,255,.03)}
