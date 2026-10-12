@@ -922,3 +922,11 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 .pb-avatar{flex-shrink:0;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;font-size:9px;font-weight:700;letter-spacing:.02em;background:var(--surface);color:var(--text);border:1px solid var(--border)}
 .pb-card.compact .pb-avatar{position:absolute;right:-8px;top:-8px;width:18px;height:18px;font-size:8px}
 .pb-assign-all{margin-top:8px;font-size:12px}
+/* Reassign from any list: the assignee name is a quiet dropdown */
+.assignee-select{position:relative;cursor:pointer;border-radius:99px;padding:2px 6px 2px 2px;margin-left:-2px;transition:background var(--dur-fast) var(--ease-out)}
+.assignee-select:hover,.assignee-select:focus-within{background:var(--hover)}
+.assignee-select select{appearance:none;-webkit-appearance:none;border:0!important;background:none!important;box-shadow:none!important;color:inherit;font:inherit;padding:0 16px 0 0!important;margin:0!important;width:auto!important;min-height:0;height:auto;cursor:pointer;outline:none}
+.assignee-select select:focus-visible{text-decoration:underline;text-underline-offset:3px}
+.assignee-select>svg:last-child{position:absolute;right:6px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted)}
+.assignee-select select option{color:#111}
+:root[data-theme=dark] .assignee-select select option{color:#eee;background:#1a1a1a}

@@ -113,6 +113,7 @@ export function describeActivity(a:Activity,actorName:string){
   case 'delete':return `${actorName} deleted ${of}`;
   case 'sent':return `${actorName} sent a payment reminder for ${a.name}`;
   case 'auto_invoice':return `GRID OS prepared the monthly invoice ${name}`;
+  case 'assign':return `${actorName} assigned ${of} to ${a.to||'nobody'}`;
   case 'import':return `${actorName} ${(a.name||'imported records').replace(/^Imported/,'imported')}`;
   case 'template':return `${actorName} created project ${name} from the “${a.to}” template`;
   default:return `${actorName} updated ${of}`;
