@@ -12,4 +12,4 @@ export async function proxy(request:NextRequest){
  return response;
 }
 // Skip static files (fonts, images, icons) — they never need a session.
-export const config={matcher:['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|ttf|otf|woff2?|css|js|map)$).*)']};
+export const config={matcher:['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|ttf|otf|woff2?|css|js|map|html|webmanifest)$).*)']};

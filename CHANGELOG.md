@@ -13,6 +13,13 @@ updates it needs — run them once, in order, in the Supabase SQL Editor (files 
 
 ---
 
+## 1.4 — 12 Oct · Install as an app
+- **Install GRID OS** like YouTube Music: its own window, icon and Dock / taskbar entry, opening straight into your workspace.
+  - Chrome and Edge: the install icon in the address bar, or **Settings → Install GRID OS → Install app**.
+  - Safari on Mac: File → Add to Dock. iPhone and iPad: Share → Add to Home Screen.
+  - Right-click the app icon to jump straight to Projects, Invoices or Tasks.
+- A GRID app icon, a black title bar to match dark mode, and a calm "You're offline" page that reloads by itself when the connection is back. Nothing else is stored offline, so every update arrives straight away.
+
 ## 1.3 — 12 Oct · Estimate to project
 - **Convert to project** on an accepted estimate opens the project builder already filled in: client, name, brief and a deliverable for every line item ("8 × Instagram reels" → 8 reel cards).
   - Each line is matched by its wording (reels, posts, story sets, photo sets, films, shoot days); anything else becomes its own deliverable type, and hours, travel and fees are left out.
