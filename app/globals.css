@@ -936,3 +936,23 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 .content>.notice.info>span{flex:1}
 .notice-close{width:26px;height:26px;margin-left:auto;color:var(--muted)}
 .toast.error>svg{color:var(--red)}
+/* About GRID OS + What's new */
+.about-row{display:flex!important;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.about-row>span{display:grid;gap:2px}.about-row small{color:var(--muted)}
+.changelog{width:min(760px,94vw)}
+.changelog-body{display:grid;gap:14px;max-height:72vh}
+.changelog-intro{margin:0;font-size:13px}
+.changelog-release{padding:16px 18px;border-radius:var(--r-lg);border:1px solid var(--border);background:var(--surface)}
+.changelog-release.latest{border-color:color-mix(in srgb,var(--accent) 40%,var(--border))}
+.changelog-release.upcoming{background:color-mix(in srgb,var(--accent) 6%,var(--surface));border-style:dashed}
+.changelog-release header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+.changelog-release h3{display:flex;align-items:center;gap:8px;margin:0;font-size:17px;letter-spacing:-.3px}
+.changelog-release h3 svg{color:var(--accent)}
+.changelog-release header span{font-size:12px;color:var(--muted)}
+.changelog-release h4{margin:12px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.changelog-release ul{margin:4px 0;padding-left:18px;display:grid;gap:5px;font-size:13.5px;line-height:1.5}
+.changelog-release ul ul{margin-top:4px;gap:3px;color:var(--muted)}
+.changelog-release code{font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;padding:1px 5px;border-radius:5px;background:var(--hover)}
+.changelog-release p{margin:6px 0;font-size:13.5px}
+.changelog-db{font-size:12px!important;color:var(--muted)}
+.changelog-release a{color:var(--accent)}

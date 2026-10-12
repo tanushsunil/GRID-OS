@@ -12,7 +12,7 @@ const security = [
 const config: NextConfig = {
   poweredByHeader: false,
   // Invoice and estimate PDFs are built on the server, which needs the PDF fonts (kept out of /public).
-  outputFileTracingIncludes: { '/api/**/*': ['./assets/pdf-fonts/**/*'] },
+  outputFileTracingIncludes: { '/api/**/*': ['./assets/pdf-fonts/**/*', './CHANGELOG.md'] },
   async headers() {
     return [
       { source: '/(.*)', headers: security },

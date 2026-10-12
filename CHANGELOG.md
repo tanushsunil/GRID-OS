@@ -29,6 +29,7 @@ updates it needs — run them once, in order, in the Supabase SQL Editor (files 
 **Elsewhere**
 - **Reassign from any list:** the assignee on task and deliverable rows is a one-click dropdown (logged in Activity).
 - Tasks and deliverables have a **start date** as well as a due date.
+- **What's new** in Settings → About GRID OS: the current version and this changelog, newest release first.
 - **Deleting a project** removes its shoots, deliverables, tasks, rentals, team assignments and monthly invoicing schedule in one step, and the confirmation lists what will go. Projects with invoices are protected.
 
 **Fixes**
