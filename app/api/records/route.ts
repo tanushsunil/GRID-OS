@@ -2,6 +2,9 @@ import {configured,supabase,currentUser} from '@/lib/supabase';
 import {requestSchema,recordSchema} from '@/lib/validation';
 import {entities,type Entity} from '@/lib/domain';
 import {reply,readJson,rateLimit,tooMany,failure} from '@/lib/api';
+import {queueDriveSync} from '@/lib/drive-hooks';
+// Saving these changes an invoice PDF, so the Drive copy is refreshed afterwards.
+const AFFECTS_INVOICE_PDF=new Set(['invoices','payments','clients']);
 import {z} from 'zod';
 // Writes are capped per signed-in person, so a runaway script or loop can't flood the database.
 class LoadError extends Error{}
@@ -19,7 +22,7 @@ export async function GET(request:Request){
  const permitted=manager?entities:['projects','shoots','deliverables','tasks'] as Entity[];
  // Backup for the daily job: prepare any monthly invoice that's due before loading (managers only; harmless if
  // monthly invoicing isn't set up yet).
- if(manager){const {error:billingError}=await db.rpc('run_my_billing',{w});if(billingError&&billingError.code!=='PGRST202')console.error('[records] monthly invoicing failed',billingError.code,billingError.message);}
+ if(manager){const {error:billingError}=await db.rpc('run_my_billing',{w});if(billingError&&billingError.code!=='PGRST202')console.error('[records] monthly invoicing failed',billingError.code,billingError.message);queueDriveSync(w);}
  // Records and team lists load together in one round, rather than one batch after another.
  const team=Promise.all([
  db.from('workspace_members').select('*,profile:profiles(*)').eq('workspace_id',w),
@@ -53,6 +56,7 @@ export async function POST(request:Request){
  const response=await query.select().single();error=response.error;result=response.data;
  }
  if(error)return reply({error:'Could not save. Check your permissions, linked records and any invoice balance. Issued invoices are locked.'},400);
+ if(AFFECTS_INVOICE_PDF.has(raw.entity))queueDriveSync(raw.workspace_id);
  return reply({record:result});
  }catch(err){return failure(err,{invalid:'Please check required fields, dates and amounts.',fallback:'Unable to save right now. Please try again.'});}
 }
@@ -64,5 +68,6 @@ export async function DELETE(request:Request){
  const limited=writeLimit(user.id);if(!limited.ok)return tooMany(limited.retryAfter);
  const {data,error}=await db.from(entity).delete().eq('id',id).eq('workspace_id',workspace_id).select('id');
  if(error||!data?.length)return reply({error:'Cannot delete this record. It may be linked to other work, issued, or outside your access.'},400);
+ if(AFFECTS_INVOICE_PDF.has(entity))queueDriveSync(workspace_id);
  return reply({ok:true});}catch(err){return failure(err,{invalid:'Unable to delete this record.',fallback:'Unable to delete this record right now.'});}
 }

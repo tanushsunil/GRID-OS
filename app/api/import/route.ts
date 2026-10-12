@@ -1,6 +1,7 @@
 import {configured,supabase,currentUser} from '@/lib/supabase';
 import {recordSchema,itemSchema} from '@/lib/validation';
 import {reply,readJson,rateLimit,tooMany,failure} from '@/lib/api';
+import {queueDriveSync} from '@/lib/drive-hooks';
 import {z} from 'zod';
 
 const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -28,6 +29,7 @@ export async function POST(request:Request){
    const invoices=rows.map(r=>invoice.parse(r));
    const {data,error}=await db.rpc('import_invoices',{w:workspace_id,invoices});
    if(error){console.error('[import] invoices failed',error.code,error.message);return reply({error:error.code==='PGRST202'?'Invoice import isn’t set up on the database yet. Run supabase/migrations/006_import.sql in the Supabase SQL Editor.':error.code==='23505'?'One of these invoice numbers already exists in GRID OS. Nothing was imported.':`Nothing was imported: ${error.message}`},400);}
+   queueDriveSync(workspace_id);
    return reply({imported:data});
   }
   const schema=recordSchema(entity);

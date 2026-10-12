@@ -1,6 +1,7 @@
 import {configured,supabase,currentUser} from '@/lib/supabase';
 import {z} from 'zod';
 import {reply,readJson,rateLimit,tooMany,failure} from '@/lib/api';
+import {queueDriveSync} from '@/lib/drive-hooks';
 const uuid=z.string().uuid();
 export async function POST(request:Request){
  if(!configured())return reply({error:'Database is not connected.'},503);
@@ -20,6 +21,7 @@ export async function POST(request:Request){
  default:return reply({error:'Unknown action.'},400);
  }
  if(result.error){console.error('[actions]',body.action,result.error.code,result.error.message);return reply({error:`This action could not be completed (${result.error.message}). Check your access and the record status. New team members must sign up first.`},400);}
+ if(body.action==='invoice_status')queueDriveSync(uuid.parse(body.workspace_id));
  return reply({result:result.data});
  }catch(err){return failure(err,{invalid:'Check the details and try again.',fallback:'This action could not be completed right now. Please try again.'});}
 }
