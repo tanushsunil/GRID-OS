@@ -10,11 +10,11 @@ const NOUN:Record<ImportKind,[string,string]>={clients:['client','clients'],lead
 const plural=(n:number,kind:ImportKind)=>`${n} ${NOUN[kind][n===1?0:1]}`;
 
 /** Import clients, leads or invoices from a CSV or Excel file: pick a file → check the columns → preview → import. */
-export default function ImportDialog({kind,data,onImport,onClose}:{kind:ImportKind;data:Data;onImport:(plan:ImportPlan)=>Promise<string>;onClose:()=>void}){
+export default function ImportDialog({kind,data,onImport,onClose}:{kind:ImportKind;data:Data;onImport:(plan:ImportPlan,progress?:(done:number,total:number)=>void)=>Promise<string>;onClose:()=>void}){
  const dialog=useRef<HTMLDialogElement>(null);const input=useRef<HTMLInputElement>(null);
  const [table,setTable]=useState<Table|null>(null);const [fileName,setFileName]=useState('');
  const [map,setMap]=useState<Record<string,number|null>>({});const [monthFirst,setMonthFirst]=useState(false);
- const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [done,setDone]=useState('');const [dragging,setDragging]=useState(false);
+ const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [done,setDone]=useState('');const [dragging,setDragging]=useState(false);const [progress,setProgress]=useState<[number,number]|null>(null);
  useEffect(()=>{dialog.current?.showModal();},[]);
  const plan=useMemo(()=>table?planImport(kind,table.rows,map,data,{monthFirst}):null,[table,map,data,monthFirst,kind]);
  const close=()=>{if(!busy)onClose();};
@@ -31,7 +31,7 @@ export default function ImportDialog({kind,data,onImport,onClose}:{kind:ImportKi
  }
  async function run(){
   if(!plan?.ready.length)return;setBusy(true);setError('');
-  try{setDone(await onImport(plan));}catch(e){setError((e as Error).message);}finally{setBusy(false);}
+  try{setDone(await onImport(plan,(d,t)=>setProgress([d,t])));}catch(e){setError((e as Error).message);}finally{setBusy(false);setProgress(null);}
  }
 
  const sample=(i:number|null)=>{if(i==null||!table)return '';const v=table.rows.find(r=>r[i]!=null&&String(r[i]).trim()!=='')?.[i];return v instanceof Date?v.toISOString().slice(0,10):String(v??'').slice(0,40);};
@@ -91,7 +91,7 @@ export default function ImportDialog({kind,data,onImport,onClose}:{kind:ImportKi
   <div className="modal-footer">
    {done?<button type="button" className="button primary" onClick={onClose}>Done</button>:<>
     <button type="button" className="button" disabled={busy} onClick={close}>Cancel</button>
-    {table&&<button type="button" className="button primary" disabled={busy||!plan?.ready.length} onClick={run}>{busy?<><Loader2 size={15} className="auth-spin"/>Importing…</>:`Import ${plural(plan?.ready.length||0,kind)}`}</button>}
+    {table&&<button type="button" className="button primary" disabled={busy||!plan?.ready.length} onClick={run}>{busy?<><Loader2 size={15} className="auth-spin"/>{progress&&progress[1]>25?`Importing ${Math.min(progress[0],progress[1])} of ${progress[1]}…`:'Importing…'}</>:`Import ${plural(plan?.ready.length||0,kind)}`}</button>}
    </>}
   </div>
  </dialog>;

@@ -157,11 +157,26 @@ export default function Workspace({demo}:{demo:boolean}){
    notify(`Exported ${t.rows.length} row${t.rows.length===1?'':'s'}`);}catch(e){notify('Export failed: '+(e as Error).message);}
  }
  /** Save a checked import plan; returns a sentence describing what was added. */
- async function runImport(plan:ImportPlan){
+ async function runImport(plan:ImportPlan,progress?:(done:number,total:number)=>void){
   const describe=(c:Record<string,number>)=>Object.entries(c).filter(([,n])=>n>0).map(([k,n])=>`${n} ${n===1?singular[k as Entity]?.toLowerCase()||k:k}`).join(', ');
   let counts:Record<string,number>;
   if(demo)counts=mutateDemo(next=>{const c=demoImport(next,plan);next.activity.unshift(logEntry({entity:plan.kind,record_id:crypto.randomUUID(),name:`Imported ${describe(c)}`,action:'import'}));return c;});
-  else{const res=await requestJson('/api/import',{body:{entity:plan.kind,workspace_id:state.workspace.id,rows:plan.ready},timeout:120000});counts=res.imported||{};await refresh(state.workspace.id);}
+  else{
+   // Sent in batches (each saved all-or-nothing) so a large file never hits the database's time limit.
+   // If a batch fails, earlier ones stay imported; importing the same file again skips them.
+   const size=plan.kind==='invoices'?25:200;counts={};const total=plan.ready.length;
+   for(let i=0;i<total;i+=size){
+    progress?.(i,total);const batch=plan.ready.slice(i,i+size);
+    try{const res=await requestJson('/api/import',{body:{entity:plan.kind,workspace_id:state.workspace.id,rows:batch},timeout:120000});
+     for(const [k,n] of Object.entries(res.imported||{}))counts[k]=(counts[k]||0)+Number(n);}
+    catch(e){
+     await refresh(state.workspace.id);
+     const rows=batch.flatMap((r:any)=>r.rows||[]);const where=rows.length?` (spreadsheet rows ${Math.min(...rows)}–${Math.max(...rows)})`:` (items ${i+1}–${i+batch.length})`;
+     throw Error(`${i?`Imported ${describe(counts)||'nothing'} so far. `:''}The next batch${where} couldn’t be saved: ${(e as Error).message}${i?' Import the same file again to continue — what’s already in GRID OS is skipped.':''}`);
+    }
+   }
+   progress?.(total,total);await refresh(state.workspace.id);
+  }
   const text=`Added ${describe(counts)||'nothing'}.`;notify(text);return text+(plan.skipped.length?` Skipped ${plan.skipped.length} already in GRID OS.`:'');
  }
  const dataButtons=(e:Entity)=>importKinds.includes(e as ImportKind)&&manager?<><button className="button" onClick={()=>setImporting(e as ImportKind)}><Upload size={15}/>Import</button><details className="export-menu"><summary className="button"><Download size={15}/>Export</summary><div className="export-options" role="menu"><button role="menuitem" onClick={ev=>{(ev.currentTarget.closest('details') as HTMLDetailsElement).open=false;exportList(e as ImportKind,'xlsx');}}>Excel (.xlsx)</button><button role="menuitem" onClick={ev=>{(ev.currentTarget.closest('details') as HTMLDetailsElement).open=false;exportList(e as ImportKind,'csv');}}>CSV (.csv)</button></div></details></>:null;

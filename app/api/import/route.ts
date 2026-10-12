@@ -28,7 +28,7 @@ export async function POST(request:Request){
   if(entity==='invoices'){
    const invoices=rows.map(r=>invoice.parse(r));
    const {data,error}=await db.rpc('import_invoices',{w:workspace_id,invoices});
-   if(error){console.error('[import] invoices failed',error.code,error.message);return reply({error:error.code==='PGRST202'?'Invoice import isn’t set up on the database yet. Run supabase/migrations/006_import.sql in the Supabase SQL Editor.':error.code==='23505'?'One of these invoice numbers already exists in GRID OS. Nothing was imported.':`Nothing was imported: ${error.message}`},400);}
+   if(error){console.error('[import] invoices failed',error.code,error.message);return reply({error:error.code==='PGRST202'?'Invoice import isn’t set up on the database yet. Run supabase/migrations/006_import.sql in the Supabase SQL Editor.':error.code==='23505'?'One of these invoice numbers already exists in GRID OS.':error.code==='57014'?'The database took too long. Try a smaller file.':`The database said: ${error.message}${error.details?` (${error.details})`:''}`},400);}
    queueDriveSync(workspace_id);
    return reply({imported:data});
   }
