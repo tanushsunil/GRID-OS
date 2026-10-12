@@ -17,20 +17,24 @@ export async function GET(request:Request){
  if(!membership)return reply({onboarding:true,user:{id:user.id,email:user.email},memberships:[]});
  const w=membership.workspace_id;const manager=membership.role!=='Editor';
  const permitted=manager?entities:['projects','shoots','deliverables','tasks'] as Entity[];
+ // Backup for the daily job: prepare any monthly invoice that's due before loading (managers only; harmless if
+ // monthly invoicing isn't set up yet).
+ if(manager){const {error:billingError}=await db.rpc('run_my_billing',{w});if(billingError&&billingError.code!=='PGRST202')console.error('[records] monthly invoicing failed',billingError.code,billingError.message);}
  // Records and team lists load together in one round, rather than one batch after another.
  const team=Promise.all([
  db.from('workspace_members').select('*,profile:profiles(*)').eq('workspace_id',w),
  db.from('activity_logs').select('*').eq('workspace_id',w).order('created_at',{ascending:false}).limit(100),
- db.from('project_members').select('*').eq('workspace_id',w)
+ db.from('project_members').select('*').eq('workspace_id',w),
+ manager?db.from('billing_schedules').select('*').eq('workspace_id',w):Promise.resolve({data:[],error:null})
  ]);
  const results=await Promise.all(permitted.map(async entity=>{
  const select=entity==='estimates'?'*,items:estimate_items(*)':entity==='invoices'?'*,items:invoice_items(*)':'*';
  const {data,error}=await db.from(entity).select(select).eq('workspace_id',w).order('created_at',{ascending:false}).limit(500);
  if(error){console.error('[records] load failed',entity,error.code,error.message);throw new LoadError(`Could not load ${entity} (${error.code||'error'}: ${error.message}).`);}return [entity,data];
  }));
- const [members,activity,projectMembers]=await team;
+ const [members,activity,projectMembers,billing]=await team;
  const failed=members.error||activity.error||projectMembers.error;if(failed){console.error('[records] team load failed',failed.code,failed.message);return reply({error:`Unable to load workspace records (${failed.code||'error'}: ${failed.message}).`},500);}
- return reply({data:Object.fromEntries(entities.map(e=>[e,results.find(r=>r[0]===e)?.[1]||[]])),workspace:membership.workspaces,role:membership.role,user:{id:user.id,email:user.email},members:members.data,activity:activity.data,projectMembers:projectMembers.data,memberships});
+ return reply({data:Object.fromEntries(entities.map(e=>[e,results.find(r=>r[0]===e)?.[1]||[]])),workspace:membership.workspaces,role:membership.role,user:{id:user.id,email:user.email},members:members.data,activity:activity.data,projectMembers:projectMembers.data,billing:billing.error?[]:billing.data,memberships});
  }catch(err){if(err instanceof LoadError)return reply({error:err.message},500);return failure(err,{fallback:'Unable to load workspace records. Please try again.'});}
 }
 export async function POST(request:Request){

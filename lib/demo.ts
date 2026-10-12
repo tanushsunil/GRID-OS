@@ -1,5 +1,6 @@
 import {emptyData,today,entities,type Data,type Row,totals,invoiceState,nextNumber} from './domain';
 import {defaultExtras,presetsFromRentals} from './extras';
+import {duePeriods,billedPeriods,invoiceFor} from './billing';
 const uid=()=>crypto.randomUUID();
 const day=(offset:number)=>{const d=new Date(today()+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+offset);return d.toISOString().slice(0,10);};
 export function sampleActivity(state:any){
@@ -50,7 +51,7 @@ export function migrateDemo(raw:any){
  const hadRentals='rentals' in stored;
  state.data={...emptyData(),...stored};
  for(const e of entities)if(!Array.isArray(state.data[e]))state.data[e]=[];
- for(const k of ['members','activity','projectMembers','memberships'])if(!Array.isArray(state[k]))state[k]=[];
+ for(const k of ['members','activity','projectMembers','memberships','billing'])if(!Array.isArray(state[k]))state[k]=[];
  if(!hadRentals)state.data.rentals=sampleRentals(state);
  if(!state.extras||typeof state.extras!=='object'){state.extras=defaultExtras();if(!state.activity.length)state.activity=sampleActivity(state);}
  state.extras={...defaultExtras(),...state.extras};
@@ -122,4 +123,18 @@ export function demoImport(state:any,plan:import('./import').ImportPlan){
   if(inv.amount_paid>0)data.payments.unshift(row({invoice_id:invoice.id,amount:inv.amount_paid,date:inv.payment_date||inv.due_date,method:inv.payment_method,reference:'Imported'}));
  }
  return {invoices,clients,projects};
+}
+
+/** Prepare every monthly invoice that is due by `today` (demo workspace). Returns the invoices created. */
+export function demoRunBilling(state:any,today:string):Row[]{
+ const data:Data=state.data;const created:Row[]=[];const stamp=new Date().toISOString();
+ for(const s of (state.billing||[]) as import('./billing').BillingSchedule[]){
+  const project=data.projects.find(p=>p.id===s.project_id);if(!project)continue;
+  for(const period of duePeriods(s,today,billedPeriods(data.invoices,s.id))){
+   const inv:Row={id:uid(),workspace_id:state.workspace?.id,created_at:stamp,...invoiceFor(s,period,project.name),number:nextNumber(data.invoices,'INV')};
+   data.invoices.unshift(inv);created.push(inv);
+   state.activity.unshift({id:uid(),created_at:stamp,actor_id:state.user?.id,entity:'invoices',record_id:inv.id,project_id:project.id,name:inv.name,action:'auto_invoice'});
+  }
+ }
+ return created;
 }

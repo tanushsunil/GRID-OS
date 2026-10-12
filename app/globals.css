@@ -824,3 +824,12 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 .auth-grid svg{border-radius:5px}
 .grid-code-box{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:var(--r-md);background:var(--hover);margin:4px 0}
 .grid-code-box code{font:600 20px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;flex:1;min-width:0}
+/* Monthly invoicing */
+.billing-summary{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r-md);background:var(--hover)}
+.billing-summary>div{flex:1;min-width:0;display:grid;gap:2px}
+.billing-summary small{color:var(--muted)}
+.billing-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:var(--accent-bg);color:var(--accent);flex-shrink:0}
+.billing-summary .badge.muted{color:var(--muted)}
+.billing-form .totals .grand{font-weight:700}
+.billing-discount{display:flex!important;justify-content:space-between;align-items:center;gap:10px;font-weight:400}
+.billing-discount input{width:110px;margin:0;text-align:right}

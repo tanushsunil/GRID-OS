@@ -22,3 +22,12 @@ export function recordSchema(entity:Entity){
  });
 }
 export const requestSchema=z.object({entity:z.enum(entities as [Entity,...Entity[]]),id:uuid.optional(),workspace_id:uuid,data:z.record(z.string(),z.unknown())});
+/** A project's monthly invoicing schedule (see lib/billing.ts). */
+export const billingSchema=z.object({
+ id:uuid.optional(),project_id:uuid,
+ items:z.array(itemSchema).min(1).max(100),discount:z.coerce.number().min(0).max(100000000).default(0),
+ payment_terms:z.string().max(20000).default(''),notes:z.string().max(20000).default(''),
+ day:z.coerce.number().int().min(1).max(31).default(29),due_days:z.coerce.number().int().min(0).max(120).default(7),
+ starts_on:z.string().regex(/^\d{4}-\d{2}$/),ends_on:z.string().regex(/^\d{4}-\d{2}$/).nullable().default(null),
+ active:z.boolean().default(true),
+}).refine(v=>!v.ends_on||v.ends_on>=v.starts_on,{message:'The last month must be on or after the first month',path:['ends_on']});
