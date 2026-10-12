@@ -71,8 +71,14 @@ export async function DELETE(request:Request){
  if(!id||entity==='payments')return reply({error:'This record cannot be deleted.'},400);
  const db=await supabase();const user=await currentUser(db);if(!user)return reply({error:'Please sign in.'},401);
  const limited=writeLimit(user.id);if(!limited.ok)return tooMany(limited.retryAfter);
+ if(entity==='projects'){
+  // a project goes together with its shoots, deliverables, tasks and rentals (not if it has invoices)
+  const {data:removed,error:pe}=await db.rpc('delete_project',{w:workspace_id,p:id});
+  if(pe){console.error('[records] delete project failed',pe.code,pe.message);return reply({error:pe.code==='PGRST202'?'Deleting projects needs a quick database update: run supabase/migrations/012_delete_project.sql in Supabase.':pe.message},400);}
+  return reply({ok:true,removed});
+ }
  const {data,error}=await db.from(entity).delete().eq('id',id).eq('workspace_id',workspace_id).select('id');
- if(error||!data?.length)return reply({error:'Cannot delete this record. It may be linked to other work, issued, or outside your access.'},400);
+ if(error||!data?.length)return reply({error:error?.code==='23503'?'This is still linked to other work (for example tasks or invoices). Remove those links first, then delete it.':error?.message?.includes('locked')||error?.message?.includes('drafts')?'Only draft invoices can be deleted.':'This couldn’t be deleted — it may already be gone or be outside your access.'},400);
  if(AFFECTS_INVOICE_PDF.has(entity))queueDriveSync(workspace_id);
  return reply({ok:true});}catch(err){return failure(err,{invalid:'Unable to delete this record.',fallback:'Unable to delete this record right now.'});}
 }

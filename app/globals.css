@@ -935,3 +935,4 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 .content>.notice.info>svg{color:var(--muted);flex-shrink:0}
 .content>.notice.info>span{flex:1}
 .notice-close{width:26px;height:26px;margin-left:auto;color:var(--muted)}
+.toast.error>svg{color:var(--red)}
