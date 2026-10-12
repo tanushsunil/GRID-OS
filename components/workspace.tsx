@@ -33,9 +33,6 @@ const ImportDialog=dynamic(()=>import('./import-dialog'));
 const GridCodeSettings=dynamic(()=>import('./grid-code-settings'));
 const MonthlyBilling=dynamic(()=>import('./monthly-billing'));
 const DriveSettings=dynamic(()=>import('./drive-settings'));
-let pdfFonts:Promise<any>|null=null;
-/** Fetch the PDF fonts once per session; a failed fetch is retried next time. */
-const loadPdfFonts=()=>pdfFonts??=import('@/lib/document-pdf').then(({PDF_FONT_FILES})=>Promise.all(Object.entries(PDF_FONT_FILES).map(async([key,url])=>{const res=await fetch(url);if(!res.ok)throw Error('font files are missing');return [key,await res.arrayBuffer()] as const;}))).then(Object.fromEntries).catch(err=>{pdfFonts=null;throw err;});
 /** Moves between workspace pages in the browser only. Every page is drawn from data already loaded, so
  *  there's no need to ask the server (and re-check the session) on each click. */
 export const go=(href:string)=>{if(href===window.location.pathname+window.location.search)return;window.history.pushState(null,'',href);window.scrollTo(0,0);};
@@ -131,9 +128,11 @@ export default function Workspace({demo}:{demo:boolean}){
  async function downloadPdf(e:Entity,r:Row){
   setPdfBusy(true);
   try{
-   const [{buildDocumentPdf,pdfFileName,DEFAULT_TERMS},fonts]=await Promise.all([import('@/lib/document-pdf'),loadPdfFonts()]);
-   const bytes=await buildDocumentPdf({kind:e==='estimates'?'estimate':'invoice',doc:r,client:idx.clients.get(r.client_id),paid:e==='invoices'?inv(r).paid:0,terms:[...DEFAULT_TERMS,r.payment_terms,r.terms,r.notes].filter((t):t is string=>!!t&&!!String(t).trim()),fonts});
-   downloadFile(pdfFileName(r),bytes as BlobPart,'application/pdf');notify(`${pdfFileName(r)} downloaded`);
+   // built on the server (where the Helvetica Neue files live), from the document as shown here
+   const res=await fetch('/api/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:e==='estimates'?'estimate':'invoice',doc:r,client:idx.clients.get(r.client_id)||null,paid:e==='invoices'?inv(r).paid:0}),signal:AbortSignal.timeout(30000)});
+   if(!res.ok){const d=await res.json().catch(()=>({}));throw Error(d.error||'the server couldn’t build it');}
+   const name=`${String(r.number||'Draft').replace(/[\\/:*?"<>|]+/g,'-').trim()}.pdf`;
+   downloadFile(name,await res.blob(),'application/pdf');notify(`${name} downloaded`);
   }catch(err){notify(`Could not create the PDF: ${(err as Error).message}`);}
   finally{setPdfBusy(false);}
  }

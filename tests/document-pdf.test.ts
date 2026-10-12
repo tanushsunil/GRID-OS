@@ -4,7 +4,7 @@ import {readFileSync} from 'fs';
 import {PDFDocument} from 'pdf-lib';
 import {buildDocumentPdf,pdfMoney,pdfDate,pdfQty,pdfFileName,PDF_FONT_FILES} from '../lib/document-pdf';
 
-const fonts=Object.fromEntries(Object.entries(PDF_FONT_FILES).map(([k,url])=>[k,readFileSync('public'+url)])) as any;
+const fonts=Object.fromEntries(Object.entries(PDF_FONT_FILES).map(([k,url])=>[k,readFileSync(url)])) as any;
 
 test('invoice formatting matches the studio style',()=>{
  assert.equal(pdfMoney(5920),'₹5,920');assert.equal(pdfMoney(120000),'₹1,20,000');assert.equal(pdfMoney(1234.5),'₹1,234.50');

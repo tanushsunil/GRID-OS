@@ -11,8 +11,8 @@ const security = [
 ];
 const config: NextConfig = {
   poweredByHeader: false,
-  // Invoice PDFs are also built on the server (to save them to Google Drive), which needs the PDF fonts.
-  outputFileTracingIncludes: { '/api/**/*': ['./public/fonts/inter/**/*'] },
+  // Invoice and estimate PDFs are built on the server, which needs the PDF fonts (kept out of /public).
+  outputFileTracingIncludes: { '/api/**/*': ['./assets/pdf-fonts/**/*'] },
   async headers() {
     return [
       { source: '/(.*)', headers: security },

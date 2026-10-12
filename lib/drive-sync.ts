@@ -1,7 +1,6 @@
-import {readFile} from 'node:fs/promises';
-import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {buildDocumentPdf,DEFAULT_TERMS,PDF_FONT_FILES,type PdfFonts} from './document-pdf';
+import {buildDocumentPdf,DEFAULT_TERMS} from './document-pdf';
+import {loadPdfFonts} from './pdf-fonts';
 import {accessToken,ensureFolder,savePdf,trash,needsReconnect,googleConfigured} from './google-drive';
 import {serviceClient} from './supabase';
 import type {Row} from './domain';
@@ -14,8 +13,6 @@ export const monthFolder=(issueDate:string)=>({year:issueDate.slice(0,4),month:`
 const clean=(s:unknown)=>String(s??'').replace(/[\\/:*?"<>|\r\n]+/g,'-').replace(/\s+/g,' ').trim();
 export const driveFileName=(inv:Row,clientName?:string)=>`${[clean(inv.number||'Draft'),clean(clientName),clean(inv.name)].filter(Boolean).join(' · ').slice(0,180)}.pdf`;
 
-let fonts:Promise<PdfFonts>|null=null;
-const loadFonts=()=>fonts??=Promise.all(Object.entries(PDF_FONT_FILES).map(async([k,url])=>[k,await readFile(path.join(process.cwd(),'public',url))] as const)).then(e=>Object.fromEntries(e) as unknown as PdfFonts).catch(err=>{fonts=null;throw err;});
 
 /** Everything the PDF depends on — if this changes, the Drive copy is refreshed. */
 export function contentHash(inv:Row,client:Row|undefined,paid:number){
@@ -48,7 +45,7 @@ export async function syncWorkspaceInvoices(workspaceId:string,{limit=25,db:inje
   const folderFor=async(issue:string)=>{const {year,month}=monthFolder(issue);const k=`${year}/${month}`;if(!folders.has(k)){const y=await ensureFolder(token,lease.folder_id!,year);folders.set(k,await ensureFolder(token,y,month));}return folders.get(k)!;};
   const todo=(invoices||[]).map(inv=>({inv,hash:contentHash(inv,inv.client,paid.get(inv.id)||0)})).filter(({inv,hash})=>known.get(inv.id)?.content_hash!==hash);
   remaining=Math.max(0,todo.length-limit);
-  const f=await loadFonts();
+  const f=await loadPdfFonts();
   for(const {inv,hash} of todo.slice(0,limit)){
    const folder=await folderFor(String(inv.issue_date));const prev=known.get(inv.id);
    const bytes=await buildDocumentPdf({kind:'invoice',doc:inv,client:inv.client,paid:paid.get(inv.id)||0,terms:[...DEFAULT_TERMS,inv.payment_terms,inv.notes].filter((t):t is string=>!!t&&!!String(t).trim()),fonts:f});
