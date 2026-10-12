@@ -66,3 +66,24 @@ test('assignees go into the new project but not into saved templates',async()=>{
  assert.ok(!('assignee_id' in t.tasks.find(x=>x.name==='Brief')!),'not chosen: falls back to the project owner');
  const saved=withoutAssignees(t);assert.ok(saved.deliverables.every(d=>!('assignee_id' in d))&&saved.tasks.every(d=>!('assignee_id' in d)));
 });
+
+test('estimate lines map to deliverables by their wording',async()=>{
+ const {guessKind,estimateLines,countsFromLines}=await import('../lib/project-plan');
+ const cases:[any,string][]=[
+  [{service:'Social content production',description:'Three vertical reels',quantity:3},'reel'],
+  [{service:'Instagram reels',quantity:8,unit:'Reel'},'reel'],
+  [{service:'Product photography',quantity:20,unit:'Photo'},'photos'],
+  [{service:'Brand film (60s)',quantity:1},'film'],
+  [{service:'Carousel posts',quantity:6},'post'],
+  [{service:'Story set',quantity:4},'story'],
+  [{service:'Videography',quantity:2,unit:'Session'},'shoot'],
+  [{service:'Shoot day',quantity:1},'shoot'],
+  [{service:'Editing',quantity:10,unit:'Hours'},'none'],
+  [{service:'Travel & logistics',quantity:1},'none'],
+  [{service:'Podcast episode',quantity:2},'custom'],
+ ];
+ for(const [item,want] of cases)assert.equal(guessKind(item),want,item.service);
+ const lines=estimateLines([{service:'Reels',quantity:3},{service:'More reels',quantity:2},{service:'Editing',quantity:5,unit:'hrs'},{service:'Podcast',quantity:2.4}]);
+ assert.deepEqual(lines.map(l=>[l.kind,l.count]),[['reel',3],['reel',2],['none',0],['custom',2]]);
+ assert.deepEqual(countsFromLines(lines),{reel:5,'est-3':2},'two reel lines add up; a custom line gets its own type');
+});

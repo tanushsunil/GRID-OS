@@ -4,9 +4,10 @@ import {X,ArrowLeft,ArrowRight,FileText,LayoutTemplate,Clapperboard,Film,Image a
 import {today,type Data} from '@/lib/domain';
 import {addDays} from '@/lib/extras';
 import type {ProjectTemplate} from '@/lib/extras';
-import {BUILT_IN_KINDS,syncPlan,defaultTasks,planFromTemplate,planToTemplate,withoutAssignees,stackRows,autoDay,dueDay,DEFAULT_LENGTH,type Kind,type PlanItem,type Lane} from '@/lib/project-plan';
+import {BUILT_IN_KINDS,syncPlan,defaultTasks,planFromTemplate,planToTemplate,withoutAssignees,stackRows,autoDay,dueDay,DEFAULT_LENGTH,estimateLines,lineKind,countsFromLines,type Kind,type PlanItem,type Lane,type EstimateLine} from '@/lib/project-plan';
+import type {Row} from '@/lib/domain';
 
-export type TemplateChoice={template:ProjectTemplate;name:string;client_id:string;owner_id:string;start_date:string};
+export type TemplateChoice={template:ProjectTemplate;name:string;client_id:string;owner_id:string;start_date:string;estimate_id?:string};
 const ICONS:Record<string,any>={shoot:Clapperboard,reel:Film,photos:ImageIcon,film:Video,post:LayoutGrid,story:Smartphone,task:CheckCircle2};
 const LANES:{id:Lane;label:string}[]=[{id:'shoot',label:'Shoots'},{id:'deliverable',label:'Deliverables'},{id:'task',label:'Tasks'}];
 const PROJECT_TYPES=['Social content','Campaign film','Photography','Event','Brand film','Other'];
@@ -17,7 +18,7 @@ const initials=(m?:Member)=>personName(m).split(/[\s@.]+/).filter(Boolean).slice
 const fmt=(iso:string,o:Intl.DateTimeFormatOptions)=>new Intl.DateTimeFormat('en-IN',{...o,timeZone:'UTC'}).format(new Date(iso+'T12:00:00Z'));
 
 /** New project: 1 · details, 2 · deliverables (counters), 3 · roadmap (drag-and-drop timeline). */
-export default function ProjectBuilder({templates,data,members,defaults,onCreate,onSaveTemplate,onClose}:{templates:ProjectTemplate[];data:Data;members:any[];defaults:{client_id?:string;owner_id?:string};onCreate:(c:TemplateChoice)=>Promise<void>;onSaveTemplate:(t:ProjectTemplate)=>void;onClose:()=>void}){
+export default function ProjectBuilder({templates,data,members,defaults,estimate,onCreate,onSaveTemplate,onClose}:{templates:ProjectTemplate[];data:Data;members:any[];defaults:{client_id?:string;owner_id?:string};estimate?:Row;onCreate:(c:TemplateChoice)=>Promise<void>;onSaveTemplate:(t:ProjectTemplate)=>void;onClose:()=>void}){
  const dialog=useRef<HTMLDialogElement>(null);
  const [step,setStep]=useState<0|1|2|3>(0);const [base,setBase]=useState<ProjectTemplate|null>(null);
  const [value,setValue]=useState({name:'',client_id:defaults.client_id||data.clients[0]?.id||'',owner_id:defaults.owner_id||'',start_date:today(),project_type:'Social content'});
@@ -26,7 +27,22 @@ export default function ProjectBuilder({templates,data,members,defaults,onCreate
  const [plan,setPlan]=useState<{counts:Record<string,number>;items:PlanItem[]}>({counts:{},items:[]});const {counts,items}=plan;
  const setItems=(f:(i:PlanItem[])=>PlanItem[])=>setPlan(p=>({...p,items:f(p.items)}));
  const [customName,setCustomName]=useState('');const [saveAs,setSaveAs]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState('');
- useEffect(()=>{dialog.current?.showModal();},[]);
+ // From an estimate: its line items become the counters (each one's mapping can be changed)
+ const [lines,setLines]=useState<EstimateLine[]>(()=>estimate?estimateLines(estimate.items||[]):[]);
+ useEffect(()=>{dialog.current?.showModal();
+  if(!estimate)return;
+  const nk=[...BUILT_IN_KINDS,...lines.filter(l=>l.kind==='custom').map(lineKind)];const c=countsFromLines(lines);if(!c.shoot)c.shoot=1;
+  setKinds(nk);setPlan({counts:c,items:syncPlan([],c,nk)});
+  setValue(v=>({...v,name:String(estimate.name||''),client_id:estimate.client_id||v.client_id}));setStep(1);
+ },[]);
+ const remap=(index:number,kind:string)=>{
+  const line=lines.find(l=>l.index===index)!;if(line.kind===kind)return;
+  const idOf=(l:EstimateLine,k:string)=>k==='custom'?`est-${l.index}`:k;
+  const count=line.count||Math.max(1,Math.min(30,Math.round(line.quantity)));
+  const nk=kind==='custom'&&!kinds.some(k=>k.id===`est-${index}`)?[...kinds,lineKind(line)]:kinds;setKinds(nk);
+  setPlan(p=>{const c={...p.counts};if(line.kind!=='none'){const o=idOf(line,line.kind);c[o]=Math.max(0,(c[o]||0)-line.count);}if(kind!=='none'){const n=idOf(line,kind);c[n]=(c[n]||0)+count;}return {counts:c,items:syncPlan(p.items,c,nk)};});
+  setLines(ls=>ls.map(l=>l.index===index?{...l,kind,count:kind==='none'?0:count}:l));
+ };
 
  const begin=(t:ProjectTemplate|null)=>{
   setBase(t);
@@ -42,9 +58,9 @@ export default function ProjectBuilder({templates,data,members,defaults,onCreate
  const create=async()=>{
   setError('');if(!items.length)return setError('Add at least one shoot, deliverable or task.');setBusy(true);
   try{
-   const template=planToTemplate(items,{name:value.name.trim(),project_type:value.project_type,brief:base?.brief||''});
+   const template=planToTemplate(items,{name:value.name.trim(),project_type:value.project_type,brief:base?.brief||String(estimate?.notes||'')});
    if(saveAs)onSaveTemplate(withoutAssignees({...template,name:`${value.name.trim()} template`}));
-   await onCreate({template,name:value.name.trim(),client_id:value.client_id,owner_id:value.owner_id,start_date:value.start_date});
+   await onCreate({template,name:value.name.trim(),client_id:value.client_id,owner_id:value.owner_id,start_date:value.start_date,estimate_id:estimate?.id});
   }catch(e){setError((e as Error).message);setBusy(false);}
  };
  const total=Object.values(counts).reduce((a,b)=>a+b,0);
@@ -52,7 +68,7 @@ export default function ProjectBuilder({templates,data,members,defaults,onCreate
 
  return <dialog ref={dialog} className="modal project-builder" onCancel={e=>{e.preventDefault();close();}}>
   <div className="modal-head">
-   <div className="modal-title">{step>0&&<button className="icon-button" aria-label="Back" onClick={()=>setStep(s=>(s-1) as 0|1|2)}><ArrowLeft size={18}/></button>}<h2>{step===0?'Start a new project':value.name||'New project'}</h2></div>
+   <div className="modal-title">{step>0&&<button className="icon-button" aria-label="Back" onClick={()=>setStep(s=>(s-1) as 0|1|2)}><ArrowLeft size={18}/></button>}<h2>{step===0?'Start a new project':value.name||'New project'}</h2>{estimate&&<span className="pb-from">from {estimate.number||'estimate'}</span>}</div>
    {step>0&&<ol className="pb-steps" aria-label="Steps">{['Details','Deliverables','Roadmap'].map((s,i)=><li key={s} className={step===i+1?'on':step>i+1?'done':''}><span>{i+1}</span>{s}</li>)}</ol>}
    <button className="icon-button" aria-label="Close" onClick={close}><X size={18}/></button>
   </div>
@@ -73,6 +89,19 @@ export default function ProjectBuilder({templates,data,members,defaults,onCreate
     <label>Project type<select value={value.project_type} onChange={e=>setValue({...value,project_type:e.target.value})}>{PROJECT_TYPES.map(t=><option key={t}>{t}</option>)}</select></label>
     <label>Start date<input type="date" required value={value.start_date} onChange={e=>setValue({...value,start_date:e.target.value})}/></label>
    </div>
+   {estimate&&lines.length>0&&<div className="pb-estimate">
+    <h4>From the estimate</h4>
+    <p className="muted">Each line becomes deliverables in the project. Change what a line becomes, or mark it as not a deliverable (e.g. editing hours or travel).</p>
+    {lines.map(l=><div className="pb-line" key={l.index}>
+     <span className="pb-line-text"><strong>{l.service}</strong><small>{l.quantity}{l.unit?` ${l.unit}`:''}</small></span>
+     <select aria-label={`What “${l.service}” becomes`} value={l.kind} onChange={e=>remap(l.index,e.target.value)}>
+      {BUILT_IN_KINDS.map(k=><option key={k.id} value={k.id}>{k.label}</option>)}
+      <option value="custom">Its own type (“{l.service}”)</option>
+      <option value="none">Not a deliverable</option>
+     </select>
+     <small className="pb-line-count">{l.kind==='none'?'—':`${l.count} item${l.count===1?'':'s'}`}</small>
+    </div>)}
+   </div>}
    <div className="pb-counters">
     <h4>What’s included</h4>
     {kinds.map(k=>{const Icon=ICONS[k.id]||Package;const n=counts[k.id]||0;return <div className={`pb-counter ${n?'active':''}`} key={k.id}>

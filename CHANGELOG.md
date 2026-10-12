@@ -7,12 +7,17 @@ updates it needs — run them once, in order, in the Supabase SQL Editor (files 
 ---
 
 ## Next up (planned)
-- **Estimate → project:** start the project builder from an accepted estimate, its line items pre-filled as deliverables ("8 × Reel" → 8 reel cards).
 - **Roadmap on existing projects:** the same drag-and-drop timeline on every project, to reschedule after creation.
 - **Retainer cycles:** monthly quotas per project (e.g. 12 posts, 4 reels, 1 shoot day) with a usage meter and carry-over.
 - **Speed on the live site:** move the Vercel function region next to the Supabase region.
 
 ---
+
+## 1.3 — 12 Oct · Estimate to project
+- **Convert to project** on an accepted estimate opens the project builder already filled in: client, name, brief and a deliverable for every line item ("8 × Instagram reels" → 8 reel cards).
+  - Each line is matched by its wording (reels, posts, story sets, photo sets, films, shoot days); anything else becomes its own deliverable type, and hours, travel and fees are left out.
+  - Change any match from the "From the estimate" list before creating; the roadmap, dates and assignees work as usual.
+- The new project is linked to the estimate; once converted, the button becomes **Open project** so nothing is created twice.
 
 ## 1.2 — 12 Oct · Project builder
 **Database:** `011_start_dates.sql`, `012_delete_project.sql`

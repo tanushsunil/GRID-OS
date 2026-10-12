@@ -95,3 +95,33 @@ export function stackRows(items:PlanItem[],minSpan=3){
  }
  return {rowOf:out,rows:Math.max(1,rows.length)};
 }
+
+/* ---------- From an estimate ---------- */
+/** One estimate line and what it becomes in the project: a built-in kind, its own deliverable type ('custom'),
+ *  or nothing ('none' — e.g. editing hours, travel, fees). */
+export type EstimateLine={index:number;service:string;quantity:number;unit:string;kind:string;count:number};
+/** Best guess from the line's wording (service, description, unit). */
+export function guessKind(item:{service?:string;description?:string;unit?:string}):string{
+ const unit=(item.unit||'').toLowerCase();const text=`${item.service||''} ${item.description||''} ${unit}`.toLowerCase();
+ if(/\b(hours?|hrs?|minutes?|mins?)\b/.test(unit)||/\b(travel|transport|fee|licen[cs]e|equipment|rental|hire|permit|insurance|retainer|discount|advance)\b/.test(text))return 'none';
+ if(/\b(reels?|shorts?|tiktoks?|vertical videos?)\b/.test(text))return 'reel';
+ if(/\b(stor(y|ies))\b/.test(text))return 'story';
+ if(/\b(posts?|carousels?|statics?|creatives?|graphics?|banners?|designs?)\b/.test(text))return 'post';
+ if(/\b(sessions?|days?|shoots?|shooting)\b/.test(unit)||/\bshoot(ing)? days?\b|\bshoots?\b/.test(text))return 'shoot';
+ if(/\b(photos?|photographs?|stills?|images?|pictures?|photography)\b/.test(text))return 'photos';
+ if(/\b(films?|videos?|commercials?|tvc|documentar(y|ies)|ads?|cut ?downs?|edits?|videography)\b/.test(text))return 'film';
+ return 'custom';
+}
+/** Each estimate line with a first guess and a count (its quantity, as a whole number of items). */
+export function estimateLines(items:{service?:string;description?:string;quantity?:number|string;unit?:string}[]):EstimateLine[]{
+ return items.map((it,index)=>{const kind=guessKind(it);const q=Number(it.quantity)||1;
+  return {index,service:String(it.service||'Item').trim()||'Item',quantity:q,unit:String(it.unit||''),kind,count:kind==='none'?0:Math.max(1,Math.min(30,Math.round(q)))};});
+}
+/** A line that becomes its own deliverable type gets a kind named after its service. */
+export const lineKind=(l:EstimateLine):Kind=>({id:`est-${l.index}`,label:l.service,singular:l.service,lane:'deliverable',type:'Other'});
+/** Counters from the lines (several lines can add to the same kind). */
+export function countsFromLines(lines:EstimateLine[]){
+ const counts:Record<string,number>={};
+ for(const l of lines){if(l.kind==='none')continue;const id=l.kind==='custom'?`est-${l.index}`:l.kind;counts[id]=(counts[id]||0)+l.count;}
+ return counts;
+}
