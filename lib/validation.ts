@@ -16,6 +16,7 @@ export function recordSchema(entity:Entity){
  return z.object(shape).superRefine((r,ctx)=>{
  if(r.start_date&&r.deadline&&String(r.deadline)<String(r.start_date))ctx.addIssue({code:'custom',path:['deadline'],message:'Deadline must follow the start date'});
  if(r.issue_date&&(r.due_date||r.valid_until)&&String(r.due_date||r.valid_until)<String(r.issue_date))ctx.addIssue({code:'custom',path:['due_date'],message:'End date must follow the issue date'});
+ if(r.start_date&&r.due_date&&String(r.due_date)<String(r.start_date))ctx.addIssue({code:'custom',path:['due_date'],message:'Due date must be on or after the start date'});
  if(r.start_date&&r.end_date&&String(r.end_date)<String(r.start_date))ctx.addIssue({code:'custom',path:['end_date'],message:'Return date must be on or after pickup'});
  if(r.start_time&&r.end_time&&String(r.end_time)<=String(r.start_time))ctx.addIssue({code:'custom',path:['end_time'],message:'End time must follow start time'});
  if(r.delivery_url){try{const u=new URL(String(r.delivery_url));if(!['https:','http:'].includes(u.protocol))throw new Error();}catch{ctx.addIssue({code:'custom',path:['delivery_url'],message:'Enter a valid HTTPS delivery link'});}}

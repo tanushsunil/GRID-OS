@@ -1,7 +1,8 @@
 import {invoiceStates,money,displayDate,terminal,singular,type Data,type Entity,type Row} from './domain';
 
 /* ---------- Workspace extras (templates, reminders, notification state) ---------- */
-export type TemplateStep={name:string;offset:number;priority?:string;type?:string};
+/** offset: days from the project start; length: how many days it runs (its due date is the last of them). */
+export type TemplateStep={name:string;offset:number;length?:number;priority?:string;type?:string};
 export type ProjectTemplate={id:string;name:string;project_type:string;duration:number;brief:string;deliverables:TemplateStep[];tasks:TemplateStep[];shoots:(TemplateStep&{start_time:string;end_time:string})[]};
 export type ReminderSettings={enabled:boolean;before:number;onDue:boolean;every:number};
 export type ReminderLog={id:string;invoice_id:string;stage:string;sent_at:string};

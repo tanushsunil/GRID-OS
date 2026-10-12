@@ -4,7 +4,7 @@ import {X,ArrowLeft,ArrowRight,FileText,LayoutTemplate,Clapperboard,Film,Image a
 import {today,type Data} from '@/lib/domain';
 import {addDays} from '@/lib/extras';
 import type {ProjectTemplate} from '@/lib/extras';
-import {BUILT_IN_KINDS,syncPlan,defaultTasks,planFromTemplate,planToTemplate,stackRows,autoDay,type Kind,type PlanItem,type Lane} from '@/lib/project-plan';
+import {BUILT_IN_KINDS,syncPlan,defaultTasks,planFromTemplate,planToTemplate,stackRows,autoDay,dueDay,DEFAULT_LENGTH,type Kind,type PlanItem,type Lane} from '@/lib/project-plan';
 
 export type TemplateChoice={template:ProjectTemplate;name:string;client_id:string;owner_id:string;start_date:string};
 const ICONS:Record<string,any>={shoot:Clapperboard,reel:Film,photos:ImageIcon,film:Video,post:LayoutGrid,story:Smartphone,task:CheckCircle2};
@@ -86,7 +86,7 @@ export default function ProjectBuilder({templates,data,members,defaults,onCreate
 
   {step===2&&<div className="modal-content pb-roadmap-body">
    <Roadmap items={items} setItems={setItems} start={value.start_date} onRemove={i=>setPlan(p=>({items:p.items.filter(x=>x.id!==i.id),counts:i.lane==='task'?p.counts:{...p.counts,[i.kind]:Math.max(0,(p.counts[i.kind]||0)-1)}}))}
-    onReset={()=>setItems(it=>it.map(i=>{if(i.lane==='task')return i;const same=it.filter(x=>x.kind===i.kind);const k=kinds.find(x=>x.id===i.kind)!;return {...i,day:autoDay(k,same.indexOf(i),it)};}))}/>
+    onReset={()=>setItems(it=>it.map(i=>{if(i.lane==='task')return i;const same=it.filter(x=>x.kind===i.kind);const k=kinds.find(x=>x.id===i.kind)!;const length=DEFAULT_LENGTH[i.kind]??2;return {...i,length,day:Math.max(0,autoDay(k,same.indexOf(i),it)-length+1)};}))}/>
    <label className="pb-save"><input type="checkbox" checked={saveAs} onChange={e=>setSaveAs(e.target.checked)}/>Save this plan as a template for next time</label>
    {error&&<p className="notice error" role="alert">{error}</p>}
   </div>}
@@ -100,20 +100,41 @@ export default function ProjectBuilder({templates,data,members,defaults,onCreate
  </dialog>;
 }
 
-/** Drag-and-drop timeline: one column per day, a lane each for shoots, deliverables and tasks. */
+/** Drag-and-drop timeline: one column per day, a lane each for shoots, deliverables and tasks.
+ *  Drag a card to move it, drag its edges to change when it starts or is due, click it to edit the details. */
+type Drag={id:string;mode:'move'|'start'|'end';x:number;orig:{day:number;length:number};cur:{day:number;length:number};moved:boolean};
 function Roadmap({items,setItems,start,onRemove,onReset}:{items:PlanItem[];setItems:(f:(i:PlanItem[])=>PlanItem[])=>void;start:string;onRemove:(i:PlanItem)=>void;onReset:()=>void}){
- const scroller=useRef<HTMLDivElement>(null);const [drag,setDrag]=useState<{id:string;from:number;x:number;day:number}|null>(null);const [editing,setEditing]=useState<string|null>(null);
- const view=drag?items.map(i=>i.id===drag.id?{...i,day:drag.day}:i):items;
- const end=Math.max(...view.map(i=>i.day),0);const days=Math.max(21,end+SPAN+7);
+ const scroller=useRef<HTMLDivElement>(null);const [drag,setDrag]=useState<Drag|null>(null);const [selected,setSelected]=useState<string|null>(null);
+ const view=drag?items.map(i=>i.id===drag.id?{...i,...drag.cur}:i):items;
+ const end=Math.max(...view.map(dueDay),0);const days=Math.max(21,end+SPAN+7);
  const lanes=useMemo(()=>LANES.map(l=>({...l,...stackRows(view.filter(i=>i.lane===l.id),SPAN)})),[view]);
- const move=(id:string,day:number)=>setItems(it=>it.map(i=>i.id===id?{...i,day:Math.max(0,Math.min(365,day))}:i));
- const onDown=(e:React.PointerEvent,i:PlanItem)=>{if(editing||(e.target as Element).closest('button,input'))return;try{(e.currentTarget as Element).setPointerCapture(e.pointerId);}catch{/* keep dragging without capture */}setDrag({id:i.id,from:i.day,x:e.clientX,day:i.day});};
- const onMove=(e:React.PointerEvent)=>{if(!drag)return;const day=Math.max(0,drag.from+Math.round((e.clientX-drag.x)/DAY_W));if(day!==drag.day)setDrag({...drag,day});
-  const s=scroller.current;if(s){const r=s.getBoundingClientRect();if(e.clientX>r.right-40)s.scrollLeft+=12;else if(e.clientX<r.left+LABEL_W+30)s.scrollLeft-=12;}};
- const onUp=()=>{if(drag){move(drag.id,drag.day);setDrag(null);}};
- const addTask=()=>{const id=Math.random().toString(36).slice(2,10);setItems(it=>[...it,{id,kind:'task',lane:'task',type:'Task',name:'New task',day:Math.max(1,...it.filter(i=>i.lane==='task').map(i=>i.day))+1}]);setEditing(id);};
+ const update=(id:string,patch:Partial<PlanItem>)=>setItems(it=>it.map(i=>i.id===id?clampItem({...i,...patch}):i));
+ const sel=items.find(i=>i.id===selected)||null;
+
+ const onDown=(e:React.PointerEvent,i:PlanItem,mode:Drag['mode'])=>{
+  if((e.target as Element).closest('.pb-card-x'))return;e.stopPropagation();
+  try{(e.currentTarget as Element).setPointerCapture(e.pointerId);}catch{/* keep dragging without capture */}
+  setDrag({id:i.id,mode,x:e.clientX,orig:{day:i.day,length:i.length},cur:{day:i.day,length:i.length},moved:false});
+ };
+ const onMove=(e:React.PointerEvent)=>{
+  if(!drag)return;const d=Math.round((e.clientX-drag.x)/DAY_W);const o=drag.orig;
+  const cur=drag.mode==='move'?{day:Math.max(0,o.day+d),length:o.length}
+   :drag.mode==='end'?{day:o.day,length:Math.max(1,o.length+d)}
+   :{day:Math.min(o.day+o.length-1,Math.max(0,o.day+d)),length:Math.max(1,o.length-(Math.min(o.day+o.length-1,Math.max(0,o.day+d))-o.day))};
+  if(cur.day!==drag.cur.day||cur.length!==drag.cur.length||(!drag.moved&&Math.abs(e.clientX-drag.x)>4))setDrag({...drag,cur,moved:drag.moved||Math.abs(e.clientX-drag.x)>4});
+  const s=scroller.current;if(s){const r=s.getBoundingClientRect();if(e.clientX>r.right-40)s.scrollLeft+=12;else if(e.clientX<r.left+LABEL_W+30)s.scrollLeft-=12;}
+ };
+ const onUp=()=>{if(!drag)return;if(drag.moved)update(drag.id,drag.cur);else setSelected(s=>s===drag.id?null:drag.id);setDrag(null);};
+ const addTask=()=>{const id=Math.random().toString(36).slice(2,10);setItems(it=>[...it,{id,kind:'task',lane:'task',type:'Task',name:'New task',day:Math.max(1,...it.filter(i=>i.lane==='task').map(dueDay))+1,length:1}]);setSelected(id);};
+ const keys=(e:React.KeyboardEvent,i:PlanItem)=>{
+  const step=e.shiftKey?7:1;
+  if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();const dir=e.key==='ArrowRight'?1:-1;
+   if(e.altKey&&i.lane!=='shoot')update(i.id,{length:i.length+dir*step});else update(i.id,{day:i.day+dir*step});}
+  else if(e.key==='Enter'){e.preventDefault();setSelected(i.id);}
+  else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();onRemove(i);if(selected===i.id)setSelected(null);}
+ };
  return <div className="pb-roadmap">
-  <div className="pb-roadmap-bar"><p className="muted">Drag cards to set their day. Arrow keys move a selected card (Shift = a week); Enter renames.</p>
+  <div className="pb-roadmap-bar"><p className="muted">Drag a card to move it · drag its edges to change the start or due date · click it to edit.</p>
    <div className="center-actions"><button type="button" className="button small" onClick={addTask}><Plus size={14}/>Task</button><button type="button" className="button small" onClick={onReset}><Wand2 size={14}/>Auto-arrange</button></div></div>
   <div className="pb-timeline" ref={scroller} style={{['--day' as any]:DAY_W+'px',['--label' as any]:LABEL_W+'px'}}>
    <div className="pb-grid" style={{width:LABEL_W+days*DAY_W}}>
@@ -123,15 +144,18 @@ function Roadmap({items,setItems,start,onRemove,onReset}:{items:PlanItem[];setIt
      <div className="pb-lane-label">{l.label}</div>
      <div className="pb-lane-track">
       {Array.from({length:days},(_,d)=>{const dow=new Date(addDays(start,d)+'T12:00:00Z').getUTCDay();return dow===0||dow===6?<span key={d} className="pb-weekend" style={{left:d*DAY_W}}/>:null;})}
-      {view.filter(i=>i.lane===l.id).map(i=>{const Icon=ICONS[i.kind]||(i.lane==='task'?CheckCircle2:Package);const iso=addDays(start,i.day);
-       return <div key={i.id} role="button" tabIndex={0} aria-label={`${i.name}, ${fmt(iso,{day:'numeric',month:'short'})}. Use arrow keys to move.`} className={`pb-card ${i.lane} ${drag?.id===i.id?'dragging':''}`}
-        style={{left:i.day*DAY_W+2,top:(l.rowOf.get(i.id)||0)*ROW_H+6,width:SPAN*DAY_W-4}}
-        onPointerDown={e=>onDown(e,i)} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={()=>setDrag(null)} onDoubleClick={()=>setEditing(i.id)}
-        onKeyDown={e=>{if(editing===i.id)return;if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();move(i.id,i.day+(e.key==='ArrowRight'?1:-1)*(e.shiftKey?7:1));}else if(e.key==='Enter'){e.preventDefault();setEditing(i.id);}else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();onRemove(i);}}}>
+      {view.filter(i=>i.lane===l.id).map(i=>{const Icon=ICONS[i.kind]||(i.lane==='task'?CheckCircle2:Package);const width=i.length*DAY_W-4;const roomy=width>=96;
+       const when=i.length>1?`${fmt(addDays(start,i.day),{day:'numeric',month:'short'})} – ${fmt(addDays(start,dueDay(i)),{day:'numeric',month:'short'})}`:i.lane==='shoot'&&i.start_time?`${fmt(addDays(start,i.day),{day:'numeric',month:'short'})} · ${i.start_time}`:fmt(addDays(start,i.day),{day:'numeric',month:'short'});
+       const resizable=i.lane!=='shoot';
+       return <div key={i.id} role="button" tabIndex={0} aria-label={`${i.name}, ${when}${i.length>1?`, ${i.length} days`:''}. Arrow keys move it${resizable?', Alt+arrows change its length':''}; Enter edits.`}
+        className={`pb-card ${i.lane} ${drag?.id===i.id?'dragging':''} ${selected===i.id?'selected':''} ${roomy?'':'compact'}`}
+        style={{left:i.day*DAY_W+2,top:(l.rowOf.get(i.id)||0)*ROW_H+6,width}}
+        onPointerDown={e=>onDown(e,i,'move')} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={()=>setDrag(null)} onKeyDown={e=>keys(e,i)}>
+        {resizable&&<span className="pb-handle start" aria-hidden="true" onPointerDown={e=>onDown(e,i,'start')} onPointerMove={onMove} onPointerUp={onUp}/>}
         <Icon size={13}/>
-        {editing===i.id?<input autoFocus defaultValue={i.name} maxLength={120} onBlur={e=>{const v=e.target.value.trim();if(v)setItems(it=>it.map(x=>x.id===i.id?{...x,name:v}:x));setEditing(null);}} onKeyDown={e=>{if(e.key==='Enter')(e.target as HTMLInputElement).blur();if(e.key==='Escape'){setEditing(null);}e.stopPropagation();}}/>
-         :<span className="pb-card-text"><strong>{i.name}</strong><small>{fmt(iso,{day:'numeric',month:'short'})}</small></span>}
-        <button type="button" className="pb-card-x" aria-label={`Remove ${i.name}`} onClick={()=>onRemove(i)}><Trash2 size={12}/></button>
+        <span className={`pb-card-text ${roomy?'':'outside'}`}><strong>{i.name}</strong><small>{when}</small></span>
+        {roomy&&<button type="button" className="pb-card-x" aria-label={`Remove ${i.name}`} onClick={()=>onRemove(i)}><Trash2 size={12}/></button>}
+        {resizable&&<span className="pb-handle end" aria-hidden="true" onPointerDown={e=>onDown(e,i,'end')} onPointerMove={onMove} onPointerUp={onUp}/>}
        </div>;})}
      </div>
     </div>)}
@@ -139,5 +163,30 @@ function Roadmap({items,setItems,start,onRemove,onReset}:{items:PlanItem[];setIt
     {end>0&&<div className="pb-marker end" style={{left:LABEL_W+(end+1)*DAY_W}}><span><Flag size={11}/>Deadline · {fmt(addDays(start,end),{day:'numeric',month:'short'})}</span></div>}
    </div>
   </div>
+  {sel&&<ItemEditor item={sel} start={start} onChange={p=>update(sel.id,p)} onDelete={()=>{onRemove(sel);setSelected(null);}} onClose={()=>setSelected(null)}/>}
+ </div>;
+}
+
+/** Keep an item sensible: never before the start, at least a day long, shoots always a single day. */
+const clampItem=(i:PlanItem):PlanItem=>({...i,day:Math.max(0,Math.min(365,Math.round(i.day))),length:i.lane==='shoot'?1:Math.max(1,Math.min(120,Math.round(i.length||1)))});
+const dayOf=(start:string,iso:string)=>Math.round((Date.parse(iso+'T12:00:00Z')-Date.parse(start+'T12:00:00Z'))/86400000);
+
+/** The details of one roadmap card: name, start, length / due date (and call/wrap times for shoots). */
+function ItemEditor({item,start,onChange,onDelete,onClose}:{item:PlanItem;start:string;onChange:(p:Partial<PlanItem>)=>void;onDelete:()=>void;onClose:()=>void}){
+ const startIso=addDays(start,item.day),dueIso=addDays(start,dueDay(item));const shoot=item.lane==='shoot';
+ return <div className="pb-editor" role="group" aria-label={`Edit ${item.name}`}>
+  <div className="pb-editor-head"><strong>{shoot?'Shoot':item.lane==='task'?'Task':'Deliverable'}</strong><button type="button" className="icon-button" aria-label="Close editor" onClick={onClose}><X size={16}/></button></div>
+  <div className="pb-editor-grid">
+   <label className="wide">Name<input value={item.name} maxLength={120} onChange={e=>onChange({name:e.target.value})} onBlur={e=>{if(!e.target.value.trim())onChange({name:'Untitled'});}}/></label>
+   <label>{shoot?'Date':'Starts'}<input type="date" value={startIso} min={start} onChange={e=>{if(e.target.value)onChange({day:dayOf(start,e.target.value)});}}/></label>
+   {shoot?<>
+    <label>Call time<input type="time" value={item.start_time||'09:00'} onChange={e=>onChange({start_time:e.target.value})}/></label>
+    <label>Wrap time<input type="time" value={item.end_time||'17:00'} onChange={e=>onChange({end_time:e.target.value})}/></label>
+   </>:<>
+    <label>Days<input type="number" min={1} max={120} value={item.length} onChange={e=>onChange({length:Number(e.target.value)||1})}/></label>
+    <label>Due<input type="date" value={dueIso} min={startIso} onChange={e=>{if(e.target.value)onChange({length:dayOf(start,e.target.value)-item.day+1});}}/></label>
+   </>}
+  </div>
+  <div className="pb-editor-foot"><button type="button" className="button small" onClick={onDelete}><Trash2 size={13}/>Remove</button><button type="button" className="button small primary" onClick={onClose}>Done</button></div>
  </div>;
 }

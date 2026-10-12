@@ -102,11 +102,13 @@ export default function Workspace({demo}:{demo:boolean}){
  const open=(entity:Entity,record:Partial<Row>={})=>setForm({entity,record});
  async function createFromTemplate({template,name,client_id,owner_id,start_date}:TemplateChoice){
   const pid=crypto.randomUUID();const at=(n:number)=>addDays(start_date,n);
+  // a step with a length runs from its offset to its due date; older templates only have a due date
+  const span=(x:{offset:number;length?:number})=>x.length&&x.length>1?{start_date:at(x.offset),due_date:at(x.offset+x.length-1)}:{due_date:at(x.offset)};
   const rows:{entity:Entity;row:Row}[]=[
    {entity:'projects',row:{id:pid,name,client_id,owner_id:owner_id||null,project_type:template.project_type,status:'Planning',start_date,deadline:at(template.duration),brief:template.brief}},
    ...template.shoots.map(x=>({entity:'shoots' as Entity,row:{id:crypto.randomUUID(),name:x.name,project_id:pid,date:at(x.offset),start_time:x.start_time,end_time:x.end_time,status:'Planned',shoot_type:template.project_type}})),
-   ...template.deliverables.map(x=>({entity:'deliverables' as Entity,row:{id:crypto.randomUUID(),name:x.name,project_id:pid,type:x.type||'Other',due_date:at(x.offset),status:'Not Started',revision_count:0,assignee_id:owner_id||null}})),
-   ...template.tasks.map(x=>({entity:'tasks' as Entity,row:{id:crypto.randomUUID(),name:x.name,project_id:pid,priority:x.priority||'Medium',due_date:at(x.offset),status:'To Do',assignee_id:owner_id||null}})),
+   ...template.deliverables.map(x=>({entity:'deliverables' as Entity,row:{id:crypto.randomUUID(),name:x.name,project_id:pid,type:x.type||'Other',...span(x),status:'Not Started',revision_count:0,assignee_id:owner_id||null}})),
+   ...template.tasks.map(x=>({entity:'tasks' as Entity,row:{id:crypto.randomUUID(),name:x.name,project_id:pid,priority:x.priority||'Medium',...span(x),status:'To Do',assignee_id:owner_id||null}})),
   ];
   let projectId=pid;
   if(demo)mutateDemo(next=>{const stamp=new Date().toISOString();rows.forEach(({entity,row})=>{next.data[entity]=[{...row,workspace_id:state.workspace.id,created_at:stamp},...next.data[entity]];});next.activity.unshift(logEntry({entity:'projects',record_id:pid,project_id:pid,name,action:'template',to:template.name}));});

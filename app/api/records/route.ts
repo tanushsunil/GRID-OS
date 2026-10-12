@@ -43,7 +43,9 @@ export async function GET(request:Request){
 export async function POST(request:Request){
  if(!configured())return reply({error:'Database is not connected.'},503);
  try{
- const raw=requestSchema.parse(await readJson(request));const data=recordSchema(raw.entity).parse(raw.data);
+ const raw=requestSchema.parse(await readJson(request));const data:Record<string,unknown>=recordSchema(raw.entity).parse(raw.data);
+ // an empty start date is simply left out, so saving still works before the 011 update adds the column
+ if(data.start_date==null&&(raw.entity==='tasks'||raw.entity==='deliverables'))delete data.start_date;
  const db=await supabase();const user=await currentUser(db);if(!user)return reply({error:'Please sign in again.'},401);
  const limited=writeLimit(user.id);if(!limited.ok)return tooMany(limited.retryAfter);
  let error;let result;
@@ -55,7 +57,7 @@ export async function POST(request:Request){
  const query=raw.id?db.from(raw.entity).update(data).eq('workspace_id',raw.workspace_id).eq('id',raw.id):db.from(raw.entity).insert({...data,workspace_id:raw.workspace_id});
  const response=await query.select().single();error=response.error;result=response.data;
  }
- if(error)return reply({error:'Could not save. Check your permissions, linked records and any invoice balance. Issued invoices are locked.'},400);
+ if(error){if(error.code==='PGRST204'&&/start_date/.test(error.message))return reply({error:'Start dates need a quick database update: run supabase/migrations/011_start_dates.sql in Supabase.'},400);return reply({error:'Could not save. Check your permissions, linked records and any invoice balance. Issued invoices are locked.'},400);}
  if(AFFECTS_INVOICE_PDF.has(raw.entity))queueDriveSync(raw.workspace_id);
  return reply({record:result});
  }catch(err){return failure(err,{invalid:'Please check required fields, dates and amounts.',fallback:'Unable to save right now. Please try again.'});}
