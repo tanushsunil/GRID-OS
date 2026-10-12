@@ -930,3 +930,8 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 .assignee-select>svg:last-child{position:absolute;right:6px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted)}
 .assignee-select select option{color:#111}
 :root[data-theme=dark] .assignee-select select option{color:#eee;background:#1a1a1a}
+/* Calm notes (information, not errors): neutral surface, muted icon, dismissable */
+.content>.notice.info{align-items:center;margin:0 0 18px;padding:10px 10px 10px 14px;background:var(--hover);border:1px solid var(--border);color:var(--text)}
+.content>.notice.info>svg{color:var(--muted);flex-shrink:0}
+.content>.notice.info>span{flex:1}
+.notice-close{width:26px;height:26px;margin-left:auto;color:var(--muted)}
