@@ -1,6 +1,7 @@
 import {emptyData,today,entities,type Data,type Row,totals,invoiceState,nextNumber} from './domain';
 import {defaultExtras,presetsFromRentals} from './extras';
 import {duePeriods,billedPeriods,invoiceFor} from './billing';
+import {invoiceSettings} from './invoice-settings';
 const uid=()=>crypto.randomUUID();
 const day=(offset:number)=>{const d=new Date(today()+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+offset);return d.toISOString().slice(0,10);};
 export function sampleActivity(state:any){
@@ -95,6 +96,7 @@ export function demoAction(state:any,body:any){const data:Data=state.data;const 
  if(action==='convert_estimate'){const e=data.estimates.find(x=>x.id===id);if(!e||e.status!=='Accepted')throw Error('Accept the estimate first.');let p=data.projects.find(x=>x.estimate_id===id);if(!p){p={id:uid(),name:e.name,client_id:e.client_id,estimate_id:id,status:'Planning',brief:e.notes||'',start_date:today()};data.projects.unshift(p);}return p.id;}
  if(action==='convert_lead'){const l=data.leads.find(x=>x.id===id);if(!l)throw Error('This lead no longer exists.');if(!l.client_id){const c={id:uid(),name:l.company||l.name,contact:l.name,email:l.email,phone:l.phone};data.clients.unshift(c);l.client_id=c.id;}let p=data.projects.find(x=>x.lead_id===id);if(body.make_project&&!p){if(l.status!=='Won')throw Error('Mark the lead Won first.');p={id:uid(),name:l.service||l.name,client_id:l.client_id,lead_id:id,status:'Planning',brief:l.notes};data.projects.unshift(p);}return {client_id:l.client_id,project_id:p?.id};}
  if(action==='invoice_status'){const i=data.invoices.find(x=>x.id===id);if(!i)throw Error('This invoice no longer exists.');if(!['Sent','Cancelled'].includes(body.status))throw Error('Choose a valid invoice status.');if(data.payments.some(p=>p.invoice_id===id)&&body.status==='Cancelled')throw Error('Invoices with payments cannot be cancelled.');i.status=body.status;return id;}
+ if(action==='invoice_settings'){state.workspace.invoice_settings=invoiceSettings(body.data);return state.workspace;}
  if(action==='workspace'){const name=String(body.data?.name??'').trim();if(!name||name.length>100)throw Error('Enter a workspace name (up to 100 characters).');Object.assign(state.workspace,{name,billing_address:String(body.data?.billing_address??'').slice(0,1000),tax_id:String(body.data?.tax_id??'').slice(0,100)});return state.workspace;}
  if(action==='assign'){state.projectMembers=state.projectMembers.filter((x:any)=>!(x.project_id===body.project_id&&x.user_id===body.user_id));if(!body.remove)state.projectMembers.push({id:uid(),project_id:body.project_id,user_id:body.user_id});return true;}
  throw Error('Connect a live workspace to manage team accounts.');

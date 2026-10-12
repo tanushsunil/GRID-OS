@@ -2,6 +2,7 @@ import {PDFDocument,rgb,type PDFFont,type PDFPage,type RGB} from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import {totals,type Row,type Item} from './domain';
 import {LOGO} from '@/components/logo';
+import {invoiceSettings,type InvoiceSettings} from './invoice-settings';
 
 /*
  * GRID media invoice / estimate PDF.
@@ -16,7 +17,7 @@ export type PdfFonts={regular:FontData;bold:FontData;italic:FontData;light:FontD
 /** Helvetica Neue, as on the studio's own invoices — pre-trimmed to Latin + ₹. Kept on the server only
  *  (not in /public): PDFs are built server-side, and only the characters used are embedded in each PDF. */
 export const PDF_FONT_FILES:Record<keyof PdfFonts,string>={regular:'assets/pdf-fonts/HelveticaNeue-Regular.ttf',bold:'assets/pdf-fonts/HelveticaNeue-Bold.ttf',italic:'assets/pdf-fonts/HelveticaNeue-Italic.ttf',light:'assets/pdf-fonts/HelveticaNeue-Light.ttf',lightItalic:'assets/pdf-fonts/HelveticaNeue-LightItalic.ttf'};
-export type DocumentPdfInput={kind:'invoice'|'estimate';doc:Row;client?:Row;paid?:number;terms?:string[];fonts:PdfFonts};
+export type DocumentPdfInput={kind:'invoice'|'estimate';doc:Row;client?:Row;paid?:number;terms?:string[];fonts:PdfFonts;options?:Partial<InvoiceSettings>};
 
 const W=595.28,H=841.89;
 const hexColor=(h:string)=>{const n=parseInt(h.replace('#',''),16);return rgb((n>>16&255)/255,(n>>8&255)/255,(n&255)/255);};
@@ -61,7 +62,18 @@ function logoLetters(page:PDFPage,x:number,y:number,scale:number,letters:RGB,str
  for(const s of LOGO.stripes)page.drawSvgPath(s.d,{x,y,scale,color:stripes??hexColor(s.fill)});
 }
 
-export async function buildDocumentPdf({kind,doc,client,paid=0,terms=DEFAULT_TERMS,fonts}:DocumentPdfInput):Promise<Uint8Array>{
+/** The lines around the total, following Settings → Invoice settings (each only when there's something to show). */
+export function summaryLines(kind:'invoice'|'estimate',sum:{subtotal:number;discount:number;tax:number;total:number},paid:number,show:InvoiceSettings){
+ const breakdown:[string,string][]=[];
+ if(show.subtotal&&(sum.discount||sum.tax))breakdown.push(['SUBTOTAL',pdfMoney(sum.subtotal)]);
+ if(show.subtotal&&sum.discount)breakdown.push(['DISCOUNT',`−${pdfMoney(sum.discount)}`]);
+ if(show.gst&&sum.tax)breakdown.push(['GST',pdfMoney(sum.tax)]);
+ const paidLine=kind==='invoice'&&paid>0?[show.paid&&`PAID ${pdfMoney(paid)}`,show.balance&&`BALANCE DUE ${pdfMoney(sum.total-paid)}`].filter(Boolean).join('   ·   '):'';
+ return {breakdown,paidLine};
+}
+
+export async function buildDocumentPdf({kind,doc,client,paid=0,terms=DEFAULT_TERMS,fonts,options}:DocumentPdfInput):Promise<Uint8Array>{
+ const show=invoiceSettings(options);
  const pdf=await PDFDocument.create();pdf.registerFontkit(fontkit);
  // Only the characters each document uses are embedded (checked with Helvetica Neue: ₹, accents, quotes, dashes).
  const [regular,bold,italic,light,lightItalic]=await Promise.all([fonts.regular,fonts.bold,fonts.italic,fonts.light,fonts.lightItalic].map(f=>pdf.embedFont(f,{subset:true})));
@@ -81,13 +93,12 @@ export async function buildDocumentPdf({kind,doc,client,paid=0,terms=DEFAULT_TER
  // Document type and number
  put(first,LABEL,COL.right,73.5,{size:10,font:regular,align:'right'});
  put(first,String(doc.number||'DRAFT'),COL.right,139.06,{size:9.41,font:regular,align:'right'});
- // Client block: with an address it sits higher, otherwise it lines up with the date
- const address=wrap([client?.billing_address,client?.tax_id&&`GSTIN ${client.tax_id}`].filter(Boolean).join('\n'),regular,8,250);
- const phone=client?.phone?String(client.phone):'';
- let cy=address.length?213.94:238.81;
+ // Client block: name, then address, GSTIN and phone all in the reference's 9.41pt regular. The block grows
+ // upwards, so its last line always sits where the phone number sits on the studio's invoices (254.17pt).
+ const details=[...wrap([client?.billing_address,client?.tax_id&&`GSTIN ${client.tax_id}`].filter(Boolean).join('\n'),regular,9.41,250),...(client?.phone?[String(client.phone)]:[])];
+ const LINE=12.6;let cy=details.length?254.17-(details.length-1)*LINE-15.36:238.81;
  put(first,String(client?.name||'Client').toUpperCase(),44.35,cy,{size:12,font:bold});
- if(address.length){cy+=24.5;for(const l of address){put(first,l,44.35,cy,{size:8,font:regular});cy+=9.2;}if(phone){cy+=10.4;put(first,phone,44.35,cy,{size:8,font:regular});}}
- else if(phone)put(first,phone,44.35,cy+15.36,{size:9.41,font:regular});
+ cy+=15.36;for(const l of details){put(first,l,44.35,cy,{size:9.41,font:regular});cy+=LINE;}
  // Date
  put(first,`${LABEL} DATE`,549.4,240.49,{size:12,font:bold,align:'right'});
  put(first,pdfDate(doc.issue_date),COL.right,255.95,{size:9.41,font:regular,align:'right'});
@@ -120,14 +131,14 @@ export async function buildDocumentPdf({kind,doc,client,paid=0,terms=DEFAULT_TER
 
  // Totals: breakdown only when there is tax or a discount (the studio's own invoices show just TOTAL)
  let ty=y-38.16+69.13;
- const breakdown:[string,string][]=[...(sum.discount||sum.tax?[['SUBTOTAL',pdfMoney(sum.subtotal)] as [string,string]]:[]),...(sum.discount?[['DISCOUNT',`−${pdfMoney(sum.discount)}`] as [string,string]]:[]),...(sum.tax?[['GST',pdfMoney(sum.tax)] as [string,string]]:[])];
- const need=breakdown.length*16+60+(kind==='invoice'&&paid>0?22:0);
+ const {breakdown,paidLine}=summaryLines(kind,sum,paid,show);
+ const need=breakdown.length*16+60+(paidLine?22:0);
  if(ty+need>bottomLimit){page=pdf.addPage([W,H]);ty=90;}
  if(breakdown.length){let by=ty-18;for(const [k,v] of breakdown){put(page,k,470,by,{size:8.5,font:regular,align:'right'});put(page,v,COL.amount,by,{size:9.5,font:regular,align:'right'});by+=16;}ty=by+18;}
  const totalText=pdfMoney(sum.total);const totalOpts:TextOpts={size:23.27,font:bold,align:'right'};
  put(page,totalText,547.7,ty,totalOpts);
  put(page,'TOTAL',547.7-textWidth(totalText,totalOpts)-12.8,ty-3.34,{size:11,font:regular,align:'right'});
- if(kind==='invoice'&&paid>0){put(page,`PAID ${pdfMoney(paid)}   ·   BALANCE DUE ${pdfMoney(sum.total-paid)}`,547.7,ty+20,{size:8.5,font:regular,align:'right'});}
+ if(paidLine)put(page,paidLine,547.7,ty+20,{size:8.5,font:regular,align:'right'});
 
  // Terms (anchored to the bottom of the last page) and the small logo
  if(termsLines.length){let top=746.04-Math.max(0,termsLines.length-2)*15;put(page,'TERMS & CONDITIONS',41.54,top,{size:9,font:bold});top+=17.3;for(const l of termsLines){put(page,l,40.82,top,{size:9,font:lightItalic});top+=15.12;}}

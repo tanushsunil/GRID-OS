@@ -17,6 +17,7 @@ export async function POST(request:Request){
  case 'member':result=await db.rpc('join_member',{w:uuid.parse(body.workspace_id),member_email:z.email().parse(body.email),member_role:z.enum(['Admin','Manager','Editor']).parse(body.role)});break;
  case 'assign':result=body.remove?await db.from('project_members').delete().eq('workspace_id',uuid.parse(body.workspace_id)).eq('project_id',uuid.parse(body.project_id)).eq('user_id',uuid.parse(body.user_id)):await db.from('project_members').insert({workspace_id:uuid.parse(body.workspace_id),project_id:uuid.parse(body.project_id),user_id:uuid.parse(body.user_id)});break;
  case 'invoice_status':result=await db.from('invoices').update({status:z.enum(['Sent','Cancelled']).parse(body.status)}).eq('id',uuid.parse(body.id)).eq('workspace_id',uuid.parse(body.workspace_id)).select('id').single();break;
+ case 'invoice_settings':result=await db.from('workspaces').update({invoice_settings:z.object({gst:z.boolean(),subtotal:z.boolean(),paid:z.boolean(),balance:z.boolean()}).parse(body.data)}).eq('id',uuid.parse(body.workspace_id)).select('id').single();if(!result.error)queueDriveSync(uuid.parse(body.workspace_id));break;
  case 'workspace':result=await db.from('workspaces').update(z.object({name:z.string().trim().min(1).max(100),billing_address:z.string().max(1000),tax_id:z.string().max(100)}).parse(body.data)).eq('id',uuid.parse(body.workspace_id)).select('id').single();break;
  default:return reply({error:'Unknown action.'},400);
  }

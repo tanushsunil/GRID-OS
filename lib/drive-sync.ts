@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
 import {buildDocumentPdf,DEFAULT_TERMS} from './document-pdf';
 import {loadPdfFonts} from './pdf-fonts';
+import {invoiceSettings,type InvoiceSettings} from './invoice-settings';
 import {accessToken,ensureFolder,savePdf,trash,needsReconnect,googleConfigured} from './google-drive';
 import {serviceClient} from './supabase';
 import type {Row} from './domain';
@@ -15,9 +16,9 @@ export const driveFileName=(inv:Row,clientName?:string)=>`${[clean(inv.number||'
 
 
 /** Everything the PDF depends on — if this changes, the Drive copy is refreshed. */
-export function contentHash(inv:Row,client:Row|undefined,paid:number){
+export function contentHash(inv:Row,client:Row|undefined,paid:number,options?:InvoiceSettings){
  const pick={n:inv.number,t:inv.name,s:inv.status,i:inv.issue_date,d:inv.due_date,x:inv.discount,p:inv.payment_terms,o:inv.notes,
-  items:(inv.items||[]).map((i:Row)=>[i.service,i.description,i.quantity,i.unit,i.rate,i.tax]),c:client&&[client.name,client.contact,client.email,client.phone,client.billing_address,client.tax_id],paid};
+  items:(inv.items||[]).map((i:Row)=>[i.service,i.description,i.quantity,i.unit,i.rate,i.tax]),c:client&&[client.name,client.contact,client.email,client.phone,client.billing_address,client.tax_id],paid,opt:options};
  return createHash('sha256').update(JSON.stringify(pick)).digest('hex');
 }
 
@@ -33,22 +34,24 @@ export async function syncWorkspaceInvoices(workspaceId:string,{limit=25,db:inje
  let uploaded=0,removed=0,remaining=0;
  try{
   const token=await accessToken(lease.refresh_token);
-  const [{data:invoices,error:ie},{data:files},{data:payments}]=await Promise.all([
+  const [{data:invoices,error:ie},{data:files},{data:payments},{data:workspace}]=await Promise.all([
    db.from('invoices').select('*,items:invoice_items(*),client:clients(*)').eq('workspace_id',workspaceId).order('issue_date',{ascending:true}),
    db.from('drive_files').select('*').eq('workspace_id',workspaceId),
    db.from('payments').select('invoice_id,amount').eq('workspace_id',workspaceId),
+   db.from('workspaces').select('invoice_settings').eq('id',workspaceId).maybeSingle(),
   ]);
+  const options=invoiceSettings(workspace?.invoice_settings);
   if(ie)throw ie;
   const known=new Map((files||[]).map(f=>[f.invoice_id,f]));
   const paid=new Map<string,number>();for(const p of payments||[])paid.set(p.invoice_id,(paid.get(p.invoice_id)||0)+Number(p.amount));
   const folders=new Map<string,string>();
   const folderFor=async(issue:string)=>{const {year,month}=monthFolder(issue);const k=`${year}/${month}`;if(!folders.has(k)){const y=await ensureFolder(token,lease.folder_id!,year);folders.set(k,await ensureFolder(token,y,month));}return folders.get(k)!;};
-  const todo=(invoices||[]).map(inv=>({inv,hash:contentHash(inv,inv.client,paid.get(inv.id)||0)})).filter(({inv,hash})=>known.get(inv.id)?.content_hash!==hash);
+  const todo=(invoices||[]).map(inv=>({inv,hash:contentHash(inv,inv.client,paid.get(inv.id)||0,options)})).filter(({inv,hash})=>known.get(inv.id)?.content_hash!==hash);
   remaining=Math.max(0,todo.length-limit);
   const f=await loadPdfFonts();
   for(const {inv,hash} of todo.slice(0,limit)){
    const folder=await folderFor(String(inv.issue_date));const prev=known.get(inv.id);
-   const bytes=await buildDocumentPdf({kind:'invoice',doc:inv,client:inv.client,paid:paid.get(inv.id)||0,terms:[...DEFAULT_TERMS,inv.payment_terms,inv.notes].filter((t):t is string=>!!t&&!!String(t).trim()),fonts:f});
+   const bytes=await buildDocumentPdf({kind:'invoice',doc:inv,client:inv.client,paid:paid.get(inv.id)||0,terms:[...DEFAULT_TERMS,inv.payment_terms,inv.notes].filter((t):t is string=>!!t&&!!String(t).trim()),fonts:f,options});
    const fileId=await savePdf(token,{name:driveFileName(inv,inv.client?.name),bytes,folder,existing:prev?{fileId:prev.file_id,folderId:prev.folder_id}:undefined});
    await db.from('drive_files').upsert({invoice_id:inv.id,workspace_id:workspaceId,file_id:fileId,folder_id:folder,content_hash:hash,synced_at:new Date().toISOString()});
    uploaded++;

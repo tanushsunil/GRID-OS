@@ -22,3 +22,17 @@ test('builds a valid one-page A4 invoice, and paginates long ones',async()=>{
  const long={...doc,items:Array.from({length:30},(_,i)=>({service:`Line ${i+1}`,description:'Detail one\nDetail two',quantity:1,rate:1000,tax:18}))};
  const many=await PDFDocument.load(await buildDocumentPdf({kind:'estimate',doc:long,fonts}));assert.ok(many.getPageCount()>1,'long documents continue on more pages');
 });
+
+test('invoice settings decide the lines under the total',async()=>{
+ const {summaryLines}=await import('../lib/document-pdf');const {invoiceSettings}=await import('../lib/invoice-settings');
+ const sum={subtotal:15000,discount:2000,tax:2340,total:15340};
+ const all=summaryLines('invoice',sum,5000,invoiceSettings({}));
+ assert.deepEqual(all.breakdown.map(b=>b[0]),['SUBTOTAL','DISCOUNT','GST']);assert.equal(all.paidLine,'PAID ₹5,000   ·   BALANCE DUE ₹10,340');
+ const none=summaryLines('invoice',sum,5000,invoiceSettings({gst:false,subtotal:false,paid:false,balance:false}));
+ assert.deepEqual(none.breakdown,[]);assert.equal(none.paidLine,'');
+ assert.equal(summaryLines('invoice',sum,5000,invoiceSettings({paid:false})).paidLine,'BALANCE DUE ₹10,340');
+ assert.deepEqual(summaryLines('invoice',sum,5000,invoiceSettings({subtotal:false})).breakdown.map(b=>b[0]),['GST']);
+ assert.equal(summaryLines('estimate',sum,5000,invoiceSettings({})).paidLine,'','estimates never show payments');
+ assert.equal(summaryLines('invoice',sum,0,invoiceSettings({})).paidLine,'','nothing paid yet: no paid/balance line');
+ assert.deepEqual(summaryLines('invoice',{subtotal:100,discount:0,tax:0,total:100},0,invoiceSettings({})).breakdown,[],'nothing to break down');
+});
