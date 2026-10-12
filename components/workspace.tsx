@@ -112,7 +112,20 @@ export default function Workspace({demo}:{demo:boolean}){
   ];
   let projectId=pid;
   if(demo)mutateDemo(next=>{const stamp=new Date().toISOString();rows.forEach(({entity,row})=>{next.data[entity]=[{...row,workspace_id:state.workspace.id,created_at:stamp},...next.data[entity]];});next.activity.unshift(logEntry({entity:'projects',record_id:pid,project_id:pid,name,action:'template',to:template.name}));});
-  else{for(const {entity,row} of rows){const {id:_id,...body}=row;if(body.project_id===pid)body.project_id=projectId;try{const result=await requestJson('/api/records',{body:{entity,workspace_id:state.workspace.id,data:body}});if(entity==='projects')projectId=result.record.id;}catch(e){if(projectId===pid)throw e;await refresh(state.workspace.id);setPicker(null);go('/projects/'+projectId);throw Error(`The project was created, but some scheduled items weren’t: ${(e as Error).message}`);}}await refresh(state.workspace.id);}
+  else{
+   // The project first; then every shoot, deliverable and task. One item failing doesn't stop the rest —
+   // anything that didn't save is listed afterwards, together with any notice from the server.
+   const failed:string[]=[];const notices=new Set<string>();
+   for(const {entity,row} of rows){const {id:_id,...body}=row;if(body.project_id===pid)body.project_id=projectId;
+    try{const result=await requestJson('/api/records',{body:{entity,workspace_id:state.workspace.id,data:body}});if(entity==='projects')projectId=result.record.id;if(result.notice)notices.add(result.notice);}
+    catch(e){if(projectId===pid)throw e;failed.push(`${row.name}: ${(e as Error).message}`);}}
+   await refresh(state.workspace.id);setPicker(null);go('/projects/'+projectId);
+   const made=rows.length-1-failed.length;
+   if(failed.length)setError(`The project was created with ${made} of ${rows.length-1} scheduled items. These couldn’t be saved — ${failed.slice(0,3).join(' · ')}${failed.length>3?` · and ${failed.length-3} more`:''}`);
+   else if(notices.size)setError([...notices].join(' '));
+   notify(failed.length?`Project created — ${failed.length} item${failed.length===1?'':'s'} need attention`:`Project created with ${made} scheduled items`);
+   return;
+  }
   setPicker(null);go('/projects/'+projectId);notify(`Project created with ${rows.length-1} scheduled items`);
  }
  function saveAsTemplate(p:Row){

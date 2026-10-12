@@ -48,18 +48,21 @@ export async function POST(request:Request){
  if(data.start_date==null&&(raw.entity==='tasks'||raw.entity==='deliverables'))delete data.start_date;
  const db=await supabase();const user=await currentUser(db);if(!user)return reply({error:'Please sign in again.'},401);
  const limited=writeLimit(user.id);if(!limited.ok)return tooMany(limited.retryAfter);
- let error;let result;
+ let error;let result;let notice='';
  if(['invoices','estimates'].includes(raw.entity)){
  const response=await db.rpc('save_document',{kind:raw.entity,w:raw.workspace_id,record_id:raw.id||null,payload:data});error=response.error;result={id:response.data};
  }else if(raw.entity==='payments'){
  const response=await db.from('payments').insert({...data,id:raw.id,workspace_id:raw.workspace_id}).select().single();error=response.error;result=response.data;
  }else{
- const query=raw.id?db.from(raw.entity).update(data).eq('workspace_id',raw.workspace_id).eq('id',raw.id):db.from(raw.entity).insert({...data,workspace_id:raw.workspace_id});
- const response=await query.select().single();error=response.error;result=response.data;
+ const write=(row:Record<string,unknown>)=>(raw.id?db.from(raw.entity).update(row).eq('workspace_id',raw.workspace_id).eq('id',raw.id):db.from(raw.entity).insert({...row,workspace_id:raw.workspace_id})).select().single();
+ let response=await write(data);
+ // Before the 011 update the start-date column doesn't exist: save the rest (due date included) instead of failing.
+ if(response.error?.code==='PGRST204'&&/start_date/.test(response.error.message)&&'start_date' in data){const {start_date:_,...rest}=data;response=await write(rest);if(!response.error)notice='Saved without the start date — run supabase/migrations/011_start_dates.sql in Supabase to keep start dates.';}
+ error=response.error;result=response.data;
  }
- if(error){if(error.code==='PGRST204'&&/start_date/.test(error.message))return reply({error:'Start dates need a quick database update: run supabase/migrations/011_start_dates.sql in Supabase.'},400);return reply({error:'Could not save. Check your permissions, linked records and any invoice balance. Issued invoices are locked.'},400);}
+ if(error){console.error('[records] save failed',raw.entity,error.code,error.message);return reply({error:`Could not save this ${raw.entity.replace(/s$/,'')}: ${error.message}`},400);}
  if(AFFECTS_INVOICE_PDF.has(raw.entity))queueDriveSync(raw.workspace_id);
- return reply({record:result});
+ return reply({record:result,...(notice?{notice}:{})});
  }catch(err){return failure(err,{invalid:'Please check required fields, dates and amounts.',fallback:'Unable to save right now. Please try again.'});}
 }
 export async function DELETE(request:Request){
