@@ -4,13 +4,16 @@ import {X,ArrowLeft,ArrowRight,FileText,LayoutTemplate,Clapperboard,Film,Image a
 import {today,type Data} from '@/lib/domain';
 import {addDays} from '@/lib/extras';
 import type {ProjectTemplate} from '@/lib/extras';
-import {BUILT_IN_KINDS,syncPlan,defaultTasks,planFromTemplate,planToTemplate,stackRows,autoDay,dueDay,DEFAULT_LENGTH,type Kind,type PlanItem,type Lane} from '@/lib/project-plan';
+import {BUILT_IN_KINDS,syncPlan,defaultTasks,planFromTemplate,planToTemplate,withoutAssignees,stackRows,autoDay,dueDay,DEFAULT_LENGTH,type Kind,type PlanItem,type Lane} from '@/lib/project-plan';
 
 export type TemplateChoice={template:ProjectTemplate;name:string;client_id:string;owner_id:string;start_date:string};
 const ICONS:Record<string,any>={shoot:Clapperboard,reel:Film,photos:ImageIcon,film:Video,post:LayoutGrid,story:Smartphone,task:CheckCircle2};
 const LANES:{id:Lane;label:string}[]=[{id:'shoot',label:'Shoots'},{id:'deliverable',label:'Deliverables'},{id:'task',label:'Tasks'}];
 const PROJECT_TYPES=['Social content','Campaign film','Photography','Event','Brand film','Other'];
 const DAY_W=40,SPAN=3,ROW_H=38,LABEL_W=112;
+type Member={user_id:string;profile?:{name?:string;email?:string}};
+const personName=(m?:Member)=>m?.profile?.name||m?.profile?.email||'Teammate';
+const initials=(m?:Member)=>personName(m).split(/[\s@.]+/).filter(Boolean).slice(0,2).map(w=>w[0]!.toUpperCase()).join('');
 const fmt=(iso:string,o:Intl.DateTimeFormatOptions)=>new Intl.DateTimeFormat('en-IN',{...o,timeZone:'UTC'}).format(new Date(iso+'T12:00:00Z'));
 
 /** New project: 1 · details, 2 · deliverables (counters), 3 · roadmap (drag-and-drop timeline). */
@@ -34,12 +37,13 @@ export default function ProjectBuilder({templates,data,members,defaults,onCreate
  const bump=(id:string,delta:number)=>setPlan(p=>{const next={...p.counts,[id]:Math.max(0,Math.min(60,(p.counts[id]||0)+delta))};return {counts:next,items:syncPlan(p.items,next,kinds)};});
  const addKind=()=>{const label=customName.trim();if(!label)return;const k:Kind={id:'custom-'+Math.random().toString(36).slice(2,8),label,singular:label,lane:'deliverable',type:'Other'};const nk=[...kinds,k];setKinds(nk);setCustomName('');setPlan(p=>{const next={...p.counts,[k.id]:1};return {counts:next,items:syncPlan(p.items,next,nk)};});};
  const toRoadmap=()=>{setError('');if(!value.name.trim())return setError('Give the project a name.');if(!value.client_id)return setError('Choose a client for this project.');
-  if(!items.some(i=>i.lane==='task')&&!base)setItems(it=>[...it,...defaultTasks(it)]);setStep(2);};
+  if(!items.some(i=>i.lane==='task')&&!base)setItems(it=>[...it,...defaultTasks(it)]);
+  setItems(it=>it.map(i=>i.lane!=='shoot'&&i.assignee_id===undefined?{...i,assignee_id:value.owner_id||null}:i));setStep(2);};
  const create=async()=>{
   setError('');if(!items.length)return setError('Add at least one shoot, deliverable or task.');setBusy(true);
   try{
    const template=planToTemplate(items,{name:value.name.trim(),project_type:value.project_type,brief:base?.brief||''});
-   if(saveAs)onSaveTemplate({...template,name:`${value.name.trim()} template`});
+   if(saveAs)onSaveTemplate(withoutAssignees({...template,name:`${value.name.trim()} template`}));
    await onCreate({template,name:value.name.trim(),client_id:value.client_id,owner_id:value.owner_id,start_date:value.start_date});
   }catch(e){setError((e as Error).message);setBusy(false);}
  };
@@ -85,7 +89,7 @@ export default function ProjectBuilder({templates,data,members,defaults,onCreate
   </div>}
 
   {step===2&&<div className="modal-content pb-roadmap-body">
-   <Roadmap items={items} setItems={setItems} start={value.start_date} onRemove={i=>setPlan(p=>({items:p.items.filter(x=>x.id!==i.id),counts:i.lane==='task'?p.counts:{...p.counts,[i.kind]:Math.max(0,(p.counts[i.kind]||0)-1)}}))}
+   <Roadmap items={items} setItems={setItems} start={value.start_date} members={members} kinds={kinds} onRemove={i=>setPlan(p=>({items:p.items.filter(x=>x.id!==i.id),counts:i.lane==='task'?p.counts:{...p.counts,[i.kind]:Math.max(0,(p.counts[i.kind]||0)-1)}}))}
     onReset={()=>setItems(it=>it.map(i=>{if(i.lane==='task')return i;const same=it.filter(x=>x.kind===i.kind);const k=kinds.find(x=>x.id===i.kind)!;const length=DEFAULT_LENGTH[i.kind]??2;return {...i,length,day:Math.max(0,autoDay(k,same.indexOf(i),it)-length+1)};}))}/>
    <label className="pb-save"><input type="checkbox" checked={saveAs} onChange={e=>setSaveAs(e.target.checked)}/>Save this plan as a template for next time</label>
    {error&&<p className="notice error" role="alert">{error}</p>}
@@ -103,7 +107,8 @@ export default function ProjectBuilder({templates,data,members,defaults,onCreate
 /** Drag-and-drop timeline: one column per day, a lane each for shoots, deliverables and tasks.
  *  Drag a card to move it, drag its edges to change when it starts or is due, click it to edit the details. */
 type Drag={id:string;mode:'move'|'start'|'end';x:number;orig:{day:number;length:number};cur:{day:number;length:number};moved:boolean};
-function Roadmap({items,setItems,start,onRemove,onReset}:{items:PlanItem[];setItems:(f:(i:PlanItem[])=>PlanItem[])=>void;start:string;onRemove:(i:PlanItem)=>void;onReset:()=>void}){
+function Roadmap({items,setItems,start,members,kinds,onRemove,onReset}:{items:PlanItem[];setItems:(f:(i:PlanItem[])=>PlanItem[])=>void;start:string;members:Member[];kinds:Kind[];onRemove:(i:PlanItem)=>void;onReset:()=>void}){
+ const byId=useMemo(()=>new Map(members.map(m=>[m.user_id,m])),[members]);
  const scroller=useRef<HTMLDivElement>(null);const [drag,setDrag]=useState<Drag|null>(null);const [selected,setSelected]=useState<string|null>(null);
  const view=drag?items.map(i=>i.id===drag.id?{...i,...drag.cur}:i):items;
  const end=Math.max(...view.map(dueDay),0);const days=Math.max(21,end+SPAN+7);
@@ -147,13 +152,14 @@ function Roadmap({items,setItems,start,onRemove,onReset}:{items:PlanItem[];setIt
       {view.filter(i=>i.lane===l.id).map(i=>{const Icon=ICONS[i.kind]||(i.lane==='task'?CheckCircle2:Package);const width=i.length*DAY_W-4;const roomy=width>=96;
        const when=i.length>1?`${fmt(addDays(start,i.day),{day:'numeric',month:'short'})} – ${fmt(addDays(start,dueDay(i)),{day:'numeric',month:'short'})}`:i.lane==='shoot'&&i.start_time?`${fmt(addDays(start,i.day),{day:'numeric',month:'short'})} · ${i.start_time}`:fmt(addDays(start,i.day),{day:'numeric',month:'short'});
        const resizable=i.lane!=='shoot';
-       return <div key={i.id} role="button" tabIndex={0} aria-label={`${i.name}, ${when}${i.length>1?`, ${i.length} days`:''}. Arrow keys move it${resizable?', Alt+arrows change its length':''}; Enter edits.`}
+       return <div key={i.id} role="button" tabIndex={0} aria-label={`${i.name}, ${when}${i.length>1?`, ${i.length} days`:''}${i.assignee_id&&byId.get(i.assignee_id)?`, assigned to ${personName(byId.get(i.assignee_id))}`:''}. Arrow keys move it${resizable?', Alt+arrows change its length':''}; Enter edits.`}
         className={`pb-card ${i.lane} ${drag?.id===i.id?'dragging':''} ${selected===i.id?'selected':''} ${roomy?'':'compact'}`}
         style={{left:i.day*DAY_W+2,top:(l.rowOf.get(i.id)||0)*ROW_H+6,width}}
         onPointerDown={e=>onDown(e,i,'move')} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={()=>setDrag(null)} onKeyDown={e=>keys(e,i)}>
         {resizable&&<span className="pb-handle start" aria-hidden="true" onPointerDown={e=>onDown(e,i,'start')} onPointerMove={onMove} onPointerUp={onUp}/>}
         <Icon size={13}/>
         <span className={`pb-card-text ${roomy?'':'outside'}`}><strong>{i.name}</strong><small>{when}</small></span>
+        {i.assignee_id&&byId.get(i.assignee_id)&&<span className="pb-avatar" title={`Assigned to ${personName(byId.get(i.assignee_id))}`}>{initials(byId.get(i.assignee_id))}</span>}
         {roomy&&<button type="button" className="pb-card-x" aria-label={`Remove ${i.name}`} onClick={()=>onRemove(i)}><Trash2 size={12}/></button>}
         {resizable&&<span className="pb-handle end" aria-hidden="true" onPointerDown={e=>onDown(e,i,'end')} onPointerMove={onMove} onPointerUp={onUp}/>}
        </div>;})}
@@ -163,7 +169,8 @@ function Roadmap({items,setItems,start,onRemove,onReset}:{items:PlanItem[];setIt
     {end>0&&<div className="pb-marker end" style={{left:LABEL_W+(end+1)*DAY_W}}><span><Flag size={11}/>Deadline · {fmt(addDays(start,end),{day:'numeric',month:'short'})}</span></div>}
    </div>
   </div>
-  {sel&&<ItemEditor item={sel} start={start} onChange={p=>update(sel.id,p)} onDelete={()=>{onRemove(sel);setSelected(null);}} onClose={()=>setSelected(null)}/>}
+  {sel&&<ItemEditor item={sel} start={start} members={members} kind={kinds.find(k=>k.id===sel.kind)} sameKind={items.filter(i=>i.kind===sel.kind).length}
+   onAssignAll={who=>setItems(it=>it.map(i=>i.kind===sel.kind?{...i,assignee_id:who}:i))} onChange={p=>update(sel.id,p)} onDelete={()=>{onRemove(sel);setSelected(null);}} onClose={()=>setSelected(null)}/>}
  </div>;
 }
 
@@ -172,7 +179,7 @@ const clampItem=(i:PlanItem):PlanItem=>({...i,day:Math.max(0,Math.min(365,Math.r
 const dayOf=(start:string,iso:string)=>Math.round((Date.parse(iso+'T12:00:00Z')-Date.parse(start+'T12:00:00Z'))/86400000);
 
 /** The details of one roadmap card: name, start, length / due date (and call/wrap times for shoots). */
-function ItemEditor({item,start,onChange,onDelete,onClose}:{item:PlanItem;start:string;onChange:(p:Partial<PlanItem>)=>void;onDelete:()=>void;onClose:()=>void}){
+function ItemEditor({item,start,members,kind,sameKind,onAssignAll,onChange,onDelete,onClose}:{item:PlanItem;start:string;members:Member[];kind?:Kind;sameKind:number;onAssignAll:(who:string|null)=>void;onChange:(p:Partial<PlanItem>)=>void;onDelete:()=>void;onClose:()=>void}){
  const startIso=addDays(start,item.day),dueIso=addDays(start,dueDay(item));const shoot=item.lane==='shoot';
  return <div className="pb-editor" role="group" aria-label={`Edit ${item.name}`}>
   <div className="pb-editor-head"><strong>{shoot?'Shoot':item.lane==='task'?'Task':'Deliverable'}</strong><button type="button" className="icon-button" aria-label="Close editor" onClick={onClose}><X size={16}/></button></div>
@@ -185,8 +192,10 @@ function ItemEditor({item,start,onChange,onDelete,onClose}:{item:PlanItem;start:
    </>:<>
     <label>Days<input type="number" min={1} max={120} value={item.length} onChange={e=>onChange({length:Number(e.target.value)||1})}/></label>
     <label>Due<input type="date" value={dueIso} min={startIso} onChange={e=>{if(e.target.value)onChange({length:dayOf(start,e.target.value)-item.day+1});}}/></label>
+    <label className="wide">Assigned to<select value={item.assignee_id||''} onChange={e=>onChange({assignee_id:e.target.value||null})}><option value="">Unassigned</option>{members.map(m=><option key={m.user_id} value={m.user_id}>{personName(m)}</option>)}</select></label>
    </>}
   </div>
+  {!shoot&&kind&&kind.id!=='task'&&sameKind>1&&<button type="button" className="link-button pb-assign-all" onClick={()=>onAssignAll(item.assignee_id??null)}>Give all {sameKind} {kind.label.toLowerCase()} to {item.assignee_id?personName(members.find(m=>m.user_id===item.assignee_id)):'nobody (unassigned)'}</button>}
   <div className="pb-editor-foot"><button type="button" className="button small" onClick={onDelete}><Trash2 size={13}/>Remove</button><button type="button" className="button small primary" onClick={onClose}>Done</button></div>
  </div>;
 }

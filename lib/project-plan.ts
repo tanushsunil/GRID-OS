@@ -6,7 +6,7 @@ export type Lane='shoot'|'deliverable'|'task';
 export type Kind={id:string;label:string;singular:string;lane:Lane;type:string;builtIn?:boolean};
 /** day: first day (from the project start); length: days it runs — its due date is day+length-1.
  *  Shoots are single days with a call and wrap time. */
-export type PlanItem={id:string;kind:string;lane:Lane;name:string;type:string;day:number;length:number;start_time?:string;end_time?:string};
+export type PlanItem={id:string;kind:string;lane:Lane;name:string;type:string;day:number;length:number;start_time?:string;end_time?:string;assignee_id?:string|null};
 export const dueDay=(i:Pick<PlanItem,'day'|'length'>)=>i.day+Math.max(1,i.length)-1;
 /** How long each kind usually takes, ending on its due date. */
 export const DEFAULT_LENGTH:Record<string,number>={shoot:1,reel:3,photos:2,film:7,post:2,story:1,task:1};
@@ -76,8 +76,13 @@ export function planToTemplate(items:PlanItem[],meta:{name:string;project_type:s
  const sorted=[...items].sort((a,b)=>a.day-b.day);
  return {id:'tpl-'+uid(),name:meta.name,project_type:meta.project_type,brief:meta.brief,duration:Math.max(1,...items.map(dueDay)),
   shoots:sorted.filter(i=>i.lane==='shoot').map(i=>({name:i.name,offset:i.day,start_time:i.start_time||'09:00',end_time:i.end_time||'17:00'})),
-  deliverables:sorted.filter(i=>i.lane==='deliverable').map(i=>({name:i.name,type:i.type,offset:i.day,length:Math.max(1,i.length)})),
-  tasks:sorted.filter(i=>i.lane==='task').map(i=>({name:i.name,priority:'Medium',offset:i.day,length:Math.max(1,i.length)}))};
+  deliverables:sorted.filter(i=>i.lane==='deliverable').map(i=>({name:i.name,type:i.type,offset:i.day,length:Math.max(1,i.length),...(i.assignee_id!==undefined?{assignee_id:i.assignee_id}:{})})),
+  tasks:sorted.filter(i=>i.lane==='task').map(i=>({name:i.name,priority:'Medium',offset:i.day,length:Math.max(1,i.length),...(i.assignee_id!==undefined?{assignee_id:i.assignee_id}:{})}))};
+}
+/** A plan saved for reuse doesn't keep who was assigned — templates are used with different teams. */
+export function withoutAssignees(t:ProjectTemplate):ProjectTemplate{
+ const strip=<T extends {assignee_id?:string|null}>(x:T)=>{const {assignee_id:_,...rest}=x;return rest as T;};
+ return {...t,deliverables:t.deliverables.map(strip),tasks:t.tasks.map(strip)};
 }
 
 /** Lay items out in rows so cards never overlap. Each card takes its length, or at least `minSpan` days

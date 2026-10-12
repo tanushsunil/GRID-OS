@@ -56,3 +56,13 @@ test('lengths: long cards take their full width, and templates keep start and le
  assert.deepEqual([t.shoots[0].start_time,t.shoots[0].end_time],['06:30','14:00']);
  const back=planFromTemplate(t);const film=back.items.find(i=>i.name==='Hero film')!;assert.deepEqual([film.day,film.length],[20,7]);
 });
+
+test('assignees go into the new project but not into saved templates',async()=>{
+ const {withoutAssignees}=await import('../lib/project-plan');
+ const items:PlanItem[]=[{id:'r',kind:'reel',lane:'deliverable',type:'Reel',name:'Reel',day:10,length:3,assignee_id:'riya'},{id:'t',kind:'task',lane:'task',type:'Task',name:'Edit',day:9,length:1,assignee_id:null},{id:'u',kind:'task',lane:'task',type:'Task',name:'Brief',day:1,length:1}];
+ const t=planToTemplate(items,{name:'x',project_type:'Other',brief:''});
+ assert.equal(t.deliverables[0].assignee_id,'riya');
+ assert.equal(t.tasks.find(x=>x.name==='Edit')!.assignee_id,null,'explicitly unassigned stays unassigned');
+ assert.ok(!('assignee_id' in t.tasks.find(x=>x.name==='Brief')!),'not chosen: falls back to the project owner');
+ const saved=withoutAssignees(t);assert.ok(saved.deliverables.every(d=>!('assignee_id' in d))&&saved.tasks.every(d=>!('assignee_id' in d)));
+});

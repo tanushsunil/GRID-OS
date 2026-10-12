@@ -919,3 +919,6 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 .pb-editor-grid label{font-size:12px;font-weight:500}.pb-editor-grid input{margin-top:4px}
 .pb-editor-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
 @media(max-width:700px){.pb-editor-grid{grid-template-columns:1fr 1fr}.pb-editor-grid .wide{grid-column:1/-1}}
+.pb-avatar{flex-shrink:0;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;font-size:9px;font-weight:700;letter-spacing:.02em;background:var(--surface);color:var(--text);border:1px solid var(--border)}
+.pb-card.compact .pb-avatar{position:absolute;right:-8px;top:-8px;width:18px;height:18px;font-size:8px}
+.pb-assign-all{margin-top:8px;font-size:12px}

@@ -107,8 +107,8 @@ export default function Workspace({demo}:{demo:boolean}){
   const rows:{entity:Entity;row:Row}[]=[
    {entity:'projects',row:{id:pid,name,client_id,owner_id:owner_id||null,project_type:template.project_type,status:'Planning',start_date,deadline:at(template.duration),brief:template.brief}},
    ...template.shoots.map(x=>({entity:'shoots' as Entity,row:{id:crypto.randomUUID(),name:x.name,project_id:pid,date:at(x.offset),start_time:x.start_time,end_time:x.end_time,status:'Planned',shoot_type:template.project_type}})),
-   ...template.deliverables.map(x=>({entity:'deliverables' as Entity,row:{id:crypto.randomUUID(),name:x.name,project_id:pid,type:x.type||'Other',...span(x),status:'Not Started',revision_count:0,assignee_id:owner_id||null}})),
-   ...template.tasks.map(x=>({entity:'tasks' as Entity,row:{id:crypto.randomUUID(),name:x.name,project_id:pid,priority:x.priority||'Medium',...span(x),status:'To Do',assignee_id:owner_id||null}})),
+   ...template.deliverables.map(x=>({entity:'deliverables' as Entity,row:{id:crypto.randomUUID(),name:x.name,project_id:pid,type:x.type||'Other',...span(x),status:'Not Started',revision_count:0,assignee_id:x.assignee_id!==undefined?x.assignee_id:owner_id||null}})),
+   ...template.tasks.map(x=>({entity:'tasks' as Entity,row:{id:crypto.randomUUID(),name:x.name,project_id:pid,priority:x.priority||'Medium',...span(x),status:'To Do',assignee_id:x.assignee_id!==undefined?x.assignee_id:owner_id||null}})),
   ];
   let projectId=pid;
   if(demo)mutateDemo(next=>{const stamp=new Date().toISOString();rows.forEach(({entity,row})=>{next.data[entity]=[{...row,workspace_id:state.workspace.id,created_at:stamp},...next.data[entity]];});next.activity.unshift(logEntry({entity:'projects',record_id:pid,project_id:pid,name,action:'template',to:template.name}));});
