@@ -7,6 +7,7 @@ export type BillingSchedule={
  items:Item[];discount:number;payment_terms?:string;notes?:string;
  day:number;            // day of the month the invoice is prepared (29 by default; clamped to short months)
  due_days:number;       // payment due this many days after the invoice date
+ skipped?:string[];     // months whose invoice was deleted — never prepared again
  starts_on:string;      // first month billed, YYYY-MM
  ends_on?:string|null;  // last month billed, YYYY-MM (optional)
  active:boolean;created_at?:string;
@@ -60,5 +61,5 @@ export function invoiceFor(s:BillingSchedule,period:string,projectName:string):O
 
 /** Monthly total for display. */
 export const scheduleTotal=(s:Pick<BillingSchedule,'items'|'discount'>)=>totals(s.items,s.discount||0).total;
-/** Months already invoiced for a schedule, from the invoices list. */
-export const billedPeriods=(invoices:Row[],scheduleId:string)=>new Set(invoices.filter(i=>i.schedule_id===scheduleId&&i.billing_period).map(i=>String(i.billing_period)));
+/** Months already dealt with for a schedule: invoiced, or invoiced and then deleted (skipped). */
+export const billedPeriods=(invoices:Row[],scheduleId:string,skipped:string[]=[])=>new Set([...invoices.filter(i=>i.schedule_id===scheduleId&&i.billing_period).map(i=>String(i.billing_period)),...skipped]);

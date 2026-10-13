@@ -44,7 +44,7 @@ export default function MonthlyBilling({project,schedule,invoices,estimateItems,
   {canEdit&&<div><button className="button primary" onClick={()=>setDraft(fresh())}><Repeat size={15}/>Set up monthly invoicing</button></div>}
  </div>;
 
- const done=billedPeriods(invoices,schedule.id);const next=nextRun(schedule,today,done);const monthly=totals(schedule.items,schedule.discount).total;
+ const done=billedPeriods(invoices,schedule.id,schedule.skipped);const next=nextRun(schedule,today,done);const monthly=totals(schedule.items,schedule.discount).total;
  return <div className="settings-form">
   <div className="billing-summary">
    <span className="billing-icon"><CalendarClock size={18}/></span>

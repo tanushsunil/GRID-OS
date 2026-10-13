@@ -13,6 +13,13 @@ updates it needs — run them once, in order, in the Supabase SQL Editor (files 
 
 ---
 
+## 1.5 — 14 Oct · Deleting invoices
+**Database:** `013_delete_invoices.sql`
+- **Fix:** invoices couldn't be deleted on the live site — even drafts, because of how their line items were checked. Drafts now delete normally.
+- **Sent and paid invoices** can be deleted by admins (the bin icon on the invoice). Any payments recorded against it go too, and the confirmation says how much.
+- **Deleting a project with invoices** now offers to remove them along with everything else, instead of refusing. Projects with sent invoices need an admin.
+- Deleted invoices are taken out of Google Drive, and a deleted monthly invoice stays deleted — automatic invoicing won't prepare that month again.
+
 ## 1.4 — 12 Oct · Install as an app
 - **Install GRID OS** like YouTube Music: its own window, icon and Dock / taskbar entry, opening straight into your workspace.
   - Chrome and Edge: the install icon in the address bar, or **Settings → Install GRID OS → Install app**.

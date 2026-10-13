@@ -11,7 +11,7 @@ test('database: deleting a project removes its production work, never its invoic
    create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
    create function auth.jwt() returns jsonb language sql stable as $$ select '{"email":"a@b.co"}'::jsonb $$;
    grant usage on schema auth to authenticated; grant execute on all functions in schema auth to authenticated;`);
-  for(const f of ['001_grid','002_project_cost','003_rentals','004_item_units','008_monthly_invoicing','011_start_dates','012_delete_project'])await db.exec(readFileSync(`supabase/migrations/${f}.sql`,'utf8').replace('create extension if not exists pgcrypto;',''));
+  for(const f of ['001_grid','002_project_cost','003_rentals','004_item_units','008_monthly_invoicing','011_start_dates','012_delete_project','013_delete_invoices'])await db.exec(readFileSync(`supabase/migrations/${f}.sql`,'utf8').replace('create extension if not exists pgcrypto;',''));
   const u=crypto.randomUUID(),editor=crypto.randomUUID();await db.query(`insert into auth.users(id,email) values($1,'a@b.co'),($2,'e@b.co')`,[u,editor]);
   const as=async(id:string)=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated');};
   const one=async(sql:string,a:any[]=[])=>Object.values((await db.query<any>(sql,a)).rows[0]??{})[0] as any;
@@ -28,7 +28,7 @@ test('database: deleting a project removes its production work, never its invoic
   // the editor isn't allowed
   await as(editor);await assert.rejects(()=>db.query('select delete_project($1,$2)',[w,p1]),/managers/);
   await as(u);const removed=await one('select delete_project($1,$2)',[w,p1]);
-  assert.deepEqual(removed,{tasks:1,deliverables:1,shoots:1,rentals:1});
+  assert.deepEqual(removed,{tasks:1,deliverables:1,shoots:1,rentals:1,invoices:0});
   for(const t of ['shoots','deliverables','tasks','rentals'])assert.equal(Number(await one(`select count(*) from ${t} where project_id=$1`,[p1])),0,t);
   assert.equal(Number(await one('select count(*) from projects where id=$1',[p1])),0);
   assert.equal(Number(await one('select count(*) from deliverables where project_id=$1',[p2])),1,'other projects untouched');

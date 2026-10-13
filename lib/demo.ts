@@ -132,7 +132,7 @@ export function demoRunBilling(state:any,today:string):Row[]{
  const data:Data=state.data;const created:Row[]=[];const stamp=new Date().toISOString();
  for(const s of (state.billing||[]) as import('./billing').BillingSchedule[]){
   const project=data.projects.find(p=>p.id===s.project_id);if(!project)continue;
-  for(const period of duePeriods(s,today,billedPeriods(data.invoices,s.id))){
+  for(const period of duePeriods(s,today,billedPeriods(data.invoices,s.id,s.skipped))){
    const inv:Row={id:uid(),workspace_id:state.workspace?.id,created_at:stamp,...invoiceFor(s,period,project.name),number:nextNumber(data.invoices,'INV')};
    data.invoices.unshift(inv);created.push(inv);
    state.activity.unshift({id:uid(),created_at:stamp,actor_id:state.user?.id,entity:'invoices',record_id:inv.id,project_id:project.id,name:inv.name,action:'auto_invoice'});

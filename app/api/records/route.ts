@@ -67,14 +67,22 @@ export async function POST(request:Request){
 }
 export async function DELETE(request:Request){
  if(!configured())return reply({error:'Database is not connected.'},503);
- try{const {entity,id,workspace_id}=requestSchema.parse({...await readJson(request,16*1024),data:{}});
+ try{const body=await readJson(request,16*1024);const {entity,id,workspace_id}=requestSchema.parse({...body,data:{}});const withInvoices=(body as {with_invoices?:unknown})?.with_invoices===true;
  if(!id||entity==='payments')return reply({error:'This record cannot be deleted.'},400);
  const db=await supabase();const user=await currentUser(db);if(!user)return reply({error:'Please sign in.'},401);
  const limited=writeLimit(user.id);if(!limited.ok)return tooMany(limited.retryAfter);
  if(entity==='projects'){
-  // a project goes together with its shoots, deliverables, tasks and rentals (not if it has invoices)
-  const {data:removed,error:pe}=await db.rpc('delete_project',{w:workspace_id,p:id});
-  if(pe){console.error('[records] delete project failed',pe.code,pe.message);return reply({error:pe.code==='PGRST202'?'Deleting projects needs a quick database update: run supabase/migrations/012_delete_project.sql in Supabase.':pe.message},400);}
+  // a project goes together with its shoots, deliverables, tasks and rentals — and its invoices only when asked
+  const {data:removed,error:pe}=await db.rpc('delete_project',withInvoices?{w:workspace_id,p:id,with_invoices:true}:{w:workspace_id,p:id});
+  if(pe){console.error('[records] delete project failed',pe.code,pe.message);return reply({error:pe.code==='PGRST202'?(withInvoices?'Deleting a project with its invoices needs a quick database update: run supabase/migrations/013_delete_invoices.sql in Supabase.':'Deleting projects needs a quick database update: run supabase/migrations/012_delete_project.sql in Supabase.'):pe.message},400);}
+  if(withInvoices)queueDriveSync(workspace_id);
+  return reply({ok:true,removed});
+ }
+ if(entity==='invoices'){
+  // with its line items and payments; sent invoices are for admins only (checked in the database)
+  const {data:removed,error:ie}=await db.rpc('delete_invoice',{w:workspace_id,i:id});
+  if(ie){console.error('[records] delete invoice failed',ie.code,ie.message);return reply({error:ie.code==='PGRST202'?'Deleting invoices needs a quick database update: run supabase/migrations/013_delete_invoices.sql in Supabase.':ie.message},400);}
+  queueDriveSync(workspace_id);
   return reply({ok:true,removed});
  }
  const {data,error}=await db.from(entity).delete().eq('id',id).eq('workspace_id',workspace_id).select('id');
