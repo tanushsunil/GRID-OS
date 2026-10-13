@@ -4,7 +4,8 @@
 -- 2. delete_invoice(): drafts for managers; sent or paid invoices (and their payments) for admins only.
 --    A deleted monthly invoice is remembered as skipped, so automatic invoicing doesn't recreate it.
 -- 3. delete_project() can take the project's invoices with it when asked (same rules as above).
-alter table public.billing_schedules add column if not exists skipped text[] not null default '{}';
+-- (the monthly-invoicing parts only apply if 008_monthly_invoicing.sql has been run)
+do $$ begin if to_regclass('public.billing_schedules') is not null then alter table public.billing_schedules add column if not exists skipped text[] not null default '{}'; end if; end $$;
 
 create or replace function public.guard_invoice_item() returns trigger language plpgsql set search_path=public as $$ declare p uuid; st text; begin
  p=case when tg_op='DELETE' then old.invoice_id else new.invoice_id end;
@@ -35,8 +36,8 @@ begin
  if inv.id is null then raise exception 'This invoice no longer exists'; end if;
  if not is_manager(w) then raise exception 'Only managers and admins can delete invoices'; end if;
  if inv.status<>'Draft' and not is_admin(w) then raise exception 'Only admins can delete an invoice that has been sent'; end if;
- if inv.schedule_id is not null and inv.billing_period is not null then
-  update billing_schedules set skipped=array_append(skipped,inv.billing_period) where id=inv.schedule_id and not (inv.billing_period=any(skipped));
+ if to_regclass('public.billing_schedules') is not null and to_jsonb(inv)->>'schedule_id' is not null and to_jsonb(inv)->>'billing_period' is not null then
+  update billing_schedules set skipped=array_append(skipped,to_jsonb(inv)->>'billing_period') where id=(to_jsonb(inv)->>'schedule_id')::uuid and not ((to_jsonb(inv)->>'billing_period')=any(skipped));
  end if;
  perform set_config('grid.deleting_invoice',i::text,true);
  delete from payments where invoice_id=i and workspace_id=w; get diagnostics n_payments=row_count;
@@ -68,6 +69,7 @@ revoke execute on function public.delete_project(uuid,uuid,boolean) from public;
 grant execute on function public.delete_project(uuid,uuid,boolean) to authenticated;
 
 -- automatic invoicing skips months whose invoice was deleted
+do $do$ begin if to_regclass('public.billing_schedules') is not null then execute $fn$
 create or replace function public.run_billing(only_workspace uuid,today date) returns int language plpgsql security definer set search_path=public as $$
 declare s record; p date; run date; last_day int; created int:=0; inv uuid; item jsonb; proj text; months text[]:=array['January','February','March','April','May','June','July','August','September','October','November','December'];
 begin
@@ -96,5 +98,6 @@ begin
  end loop;
  return created;
 end $$;
+$fn$; end if; end $do$;
 
 notify pgrst, 'reload schema';
