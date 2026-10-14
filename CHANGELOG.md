@@ -20,6 +20,9 @@ updates it needs — run them once, in order, in the Supabase SQL Editor (files 
 - **Deleting a project with invoices** now offers to remove them along with everything else, instead of refusing. Projects with sent invoices need an admin.
 - Deleted invoices are taken out of Google Drive, and a deleted monthly invoice stays deleted — automatic invoicing won't prepare that month again.
 
+**Elsewhere**
+- **Production dashboard:** the right-hand column now runs Delivery queue → Upcoming shoots → Recent activity, so what's due goes first.
+
 ## 1.4 — 12 Oct · Install as an app
 - **Install GRID OS** like YouTube Music: its own window, icon and Dock / taskbar entry, opening straight into your workspace.
   - Chrome and Edge: the install icon in the address bar, or **Settings → Install GRID OS → Install app**.
