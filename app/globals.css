@@ -1054,9 +1054,9 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 }
 /* Phones: the tab bar as clear liquid glass — almost no fill, a thin rounded bevel that hugs the edge */
 @media(max-width:700px){
- :root .tabbar,:root:not([data-glass=off]) .tabbar{background:rgba(255,255,255,.035);border:0;-webkit-backdrop-filter:blur(1.5px) saturate(1.8) contrast(1.04);backdrop-filter:blur(1.5px) saturate(1.8) contrast(1.04);
+ :root .tabbar,:root:not([data-glass=off]) .tabbar{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 9%,transparent),color-mix(in srgb,var(--accent) 5%,transparent)),rgba(255,255,255,.03);border:0;-webkit-backdrop-filter:blur(1.5px) saturate(1.8) contrast(1.04);backdrop-filter:blur(1.5px) saturate(1.8) contrast(1.04);
   box-shadow:inset 0 1px .5px rgba(255,255,255,.45),inset 0 -1px .5px rgba(255,255,255,.14),inset 1px 0 .5px rgba(255,255,255,.18),inset -1px 0 .5px rgba(255,255,255,.18),inset 0 0 0 .5px rgba(255,255,255,.12),inset 0 0 6px rgba(255,255,255,.05),0 12px 28px -12px rgba(0,0,0,.5)}
- :root[data-theme=light] .tabbar{background:rgba(255,255,255,.06);box-shadow:inset 0 1px .5px rgba(255,255,255,.9),inset 0 -1px .5px rgba(255,255,255,.4),inset 1px 0 .5px rgba(255,255,255,.45),inset -1px 0 .5px rgba(255,255,255,.45),inset 0 0 0 .5px rgba(30,40,60,.10),0 10px 26px -14px rgba(20,30,60,.35)}
+ :root[data-theme=light] .tabbar{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 7%,transparent),color-mix(in srgb,var(--accent) 4%,transparent)),rgba(255,255,255,.06);box-shadow:inset 0 1px .5px rgba(255,255,255,.9),inset 0 -1px .5px rgba(255,255,255,.4),inset 1px 0 .5px rgba(255,255,255,.45),inset -1px 0 .5px rgba(255,255,255,.45),inset 0 0 0 .5px rgba(30,40,60,.10),0 10px 26px -14px rgba(20,30,60,.35)}
  /* the bevel: a hairline ring, bright where light catches the curve (top-left, bottom-right), clear elsewhere */
  .tabbar::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;background:conic-gradient(from 210deg,rgba(255,255,255,.85),rgba(255,255,255,.12) 18%,rgba(255,255,255,0) 32%,rgba(255,255,255,.08) 45%,rgba(255,255,255,.55) 52%,rgba(255,255,255,.1) 64%,rgba(255,255,255,0) 80%,rgba(255,255,255,.85));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
  :root[data-theme=light] .tabbar::before{opacity:.9}
@@ -1064,8 +1064,8 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
  :root[data-refract=on] .tabbar{-webkit-backdrop-filter:url(#grid-refract) blur(1px) saturate(1.8) contrast(1.04);backdrop-filter:url(#grid-refract) blur(1px) saturate(1.8) contrast(1.04)}
  .tabbar>a,.tabbar>button{position:relative;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
  :root[data-theme=light] .tabbar>a,:root[data-theme=light] .tabbar>button{filter:drop-shadow(0 0 2px rgba(255,255,255,.9))}
- .tabbar>.active{background:rgba(255,255,255,.07);box-shadow:inset 0 1px .5px rgba(255,255,255,.35),inset 0 -1px .5px rgba(255,255,255,.08),inset 0 0 0 .5px rgba(255,255,255,.08)}
- :root[data-theme=light] .tabbar>.active{background:rgba(255,255,255,.14);box-shadow:inset 0 1px .5px rgba(255,255,255,.95),inset 0 0 0 .5px rgba(30,40,60,.08)}
+ .tabbar>.active{background:color-mix(in srgb,var(--accent) 14%,rgba(255,255,255,.05));box-shadow:inset 0 1px .5px rgba(255,255,255,.35),inset 0 -1px .5px rgba(255,255,255,.08),inset 0 0 0 .5px rgba(255,255,255,.08)}
+ :root[data-theme=light] .tabbar>.active{background:color-mix(in srgb,var(--accent) 10%,rgba(255,255,255,.14));box-shadow:inset 0 1px .5px rgba(255,255,255,.95),inset 0 0 0 .5px rgba(30,40,60,.08)}
 }
 /* Phones: no sidebar — your profile in the tab bar opens this sheet (details, display, Settings, Sign out) */
 @media(max-width:700px){
