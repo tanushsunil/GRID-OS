@@ -13,6 +13,13 @@ updates it needs — run them once, in order, in the Supabase SQL Editor (files 
 
 ---
 
+## 1.6 — 15 Oct · Section colours
+- **Choose each section's colour** in **Settings → Section colours**. The choice applies everywhere in that section: buttons, highlights, the sidebar and the background glow, in light and dark mode.
+  - Production: Orange (original), Terracotta or Soft violet.
+  - Finance: Green (original), Teal or Sage.
+  - Data: Blue (original), Indigo or Slate.
+- Saved for each browser and applied from the first frame, so there's no flash of the old colour.
+
 ## 1.5 — 14 Oct · Deleting invoices
 **Database:** `013_delete_invoices.sql`
 - **Fix:** invoices couldn't be deleted on the live site — even drafts, because of how their line items were checked. Drafts now delete normally.

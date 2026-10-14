@@ -972,3 +972,31 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 .panel-focus .panel-heading{border-bottom-color:color-mix(in srgb,var(--accent) 22%,var(--border))}
 .panel-focus .panel-heading h2{color:var(--accent)}
 .panel-focus .delivery-row{border-bottom-color:color-mix(in srgb,var(--accent) 14%,var(--border))}
+/* ===== Accent choices (Settings → Section colours; options in lib/accents.ts) ===== */
+:root[data-theme=light][data-accent-production=terracotta]{--mod-production:#b5603f}:root[data-theme=dark][data-accent-production=terracotta]{--mod-production:#e39a7c}
+:root[data-theme=light][data-accent-production=terracotta]:not([data-section=finance]):not([data-section=data]){--accent:#b5603f;--accent-bg:#f8efec;--primary:#b85c3a;--primary-hover:#9c4e31;--glow-1:rgba(196,128,101,0.32);--glow-2:rgba(222,183,169,0.3);--glow-3:rgba(181,96,63,0.16)}
+:root[data-theme=dark][data-accent-production=terracotta]:not([data-section=finance]):not([data-section=data]){--accent:#e39a7c;--accent-bg:#2d1f19;--primary:#b85c3a;--primary-hover:#9c4e31;--glow-1:rgba(184,92,58,0.17);--glow-2:rgba(227,154,124,0.07);--glow-3:rgba(184,92,58,0.07)}
+:root[data-theme=light][data-accent-production=violet]{--mod-production:#6553c9}:root[data-theme=dark][data-accent-production=violet]{--mod-production:#a99bff}
+:root[data-theme=light][data-accent-production=violet]:not([data-section=finance]):not([data-section=data]){--accent:#6553c9;--accent-bg:#f0eefa;--primary:#6b5bd2;--primary-hover:#5b4db2;--glow-1:rgba(132,117,212,0.32);--glow-2:rgba(186,178,231,0.3);--glow-3:rgba(101,83,201,0.16)}
+:root[data-theme=dark][data-accent-production=violet]:not([data-section=finance]):not([data-section=data]){--accent:#a99bff;--accent-bg:#221f33;--primary:#6b5bd2;--primary-hover:#5b4db2;--glow-1:rgba(107,91,210,0.17);--glow-2:rgba(169,155,255,0.07);--glow-3:rgba(107,91,210,0.07)}
+:root[data-theme=light][data-accent-finance=teal]{--mod-finance:#0f7a80}:root[data-theme=dark][data-accent-finance=teal]{--mod-finance:#5fcfd4}
+:root[data-theme=light][data-accent-finance=teal][data-section=finance]{--accent:#0f7a80;--accent-bg:#e7f2f2;--primary:#11808a;--primary-hover:#0e6d75;--glow-1:rgba(63,149,153,0.32);--glow-2:rgba(147,195,198,0.3);--glow-3:rgba(15,122,128,0.16)}
+:root[data-theme=dark][data-accent-finance=teal][data-section=finance]{--accent:#5fcfd4;--accent-bg:#13292a;--primary:#11808a;--primary-hover:#0e6d75;--glow-1:rgba(17,128,138,0.17);--glow-2:rgba(95,207,212,0.07);--glow-3:rgba(17,128,138,0.07)}
+:root[data-theme=light][data-accent-finance=sage]{--mod-finance:#4f7d5b}:root[data-theme=dark][data-accent-finance=sage]{--mod-finance:#9cc9a6}
+:root[data-theme=light][data-accent-finance=sage][data-section=finance]{--accent:#4f7d5b;--accent-bg:#edf2ef;--primary:#55835f;--primary-hover:#486f51;--glow-1:rgba(114,151,124,0.32);--glow-2:rgba(176,196,181,0.3);--glow-3:rgba(79,125,91,0.16)}
+:root[data-theme=dark][data-accent-finance=sage][data-section=finance]{--accent:#9cc9a6;--accent-bg:#1f2821;--primary:#55835f;--primary-hover:#486f51;--glow-1:rgba(85,131,95,0.17);--glow-2:rgba(156,201,166,0.07);--glow-3:rgba(85,131,95,0.07)}
+:root[data-theme=light][data-accent-data=indigo]{--mod-data:#4453c4}:root[data-theme=dark][data-accent-data=indigo]{--mod-data:#98a4ff}
+:root[data-theme=light][data-accent-data=indigo][data-section=data]{--accent:#4453c4;--accent-bg:#eceef9;--primary:#4a5ad0;--primary-hover:#3f4cb1;--glow-1:rgba(105,117,208,0.32);--glow-2:rgba(171,178,228,0.3);--glow-3:rgba(68,83,196,0.16)}
+:root[data-theme=dark][data-accent-data=indigo][data-section=data]{--accent:#98a4ff;--accent-bg:#1e2133;--primary:#4a5ad0;--primary-hover:#3f4cb1;--glow-1:rgba(74,90,208,0.17);--glow-2:rgba(152,164,255,0.07);--glow-3:rgba(74,90,208,0.07)}
+:root[data-theme=light][data-accent-data=slate]{--mod-data:#4c6888}:root[data-theme=dark][data-accent-data=slate]{--mod-data:#a7bcd6}
+:root[data-theme=light][data-accent-data=slate][data-section=data]{--accent:#4c6888;--accent-bg:#edf0f3;--primary:#526f91;--primary-hover:#465e7b;--glow-1:rgba(112,134,160,0.32);--glow-2:rgba(174,187,201,0.3);--glow-3:rgba(76,104,136,0.16)}
+:root[data-theme=dark][data-accent-data=slate][data-section=data]{--accent:#a7bcd6;--accent-bg:#21262b;--primary:#526f91;--primary-hover:#465e7b;--glow-1:rgba(82,111,145,0.17);--glow-2:rgba(167,188,214,0.07);--glow-3:rgba(82,111,145,0.07)}
+/* Settings → Section colours */
+.accent-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--border)}
+.accent-row>strong{font-size:13px;font-weight:600}
+.accent-options{display:flex;gap:8px;flex-wrap:wrap}
+.accent-option{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:99px;border:1px solid var(--border);background:transparent;font-size:12px;font-weight:500;transition:background var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out)}
+.accent-option:hover{background:var(--hover)}
+.accent-option.on{border-color:var(--swatch);background:color-mix(in srgb,var(--swatch) 10%,transparent)}
+.accent-option small{color:var(--muted);font-size:10px}
+.accent-swatch{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--swatch);color:#fff}
