@@ -29,8 +29,11 @@ export function PwaSetup(){
   const onPrompt=(e:Event)=>{e.preventDefault();deferred=e as InstallPrompt;refresh();};
   const onInstalled=()=>{installed=true;deferred=null;refresh();};
   window.addEventListener('beforeinstallprompt',onPrompt);window.addEventListener('appinstalled',onInstalled);
+  // the browser's own top bar (status bar area) takes the page's colour, following light/dark changes
+  const tint=()=>{const bg=getComputedStyle(document.body).backgroundColor;let meta=document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');if(!meta){meta=document.createElement('meta');meta.name='theme-color';document.head.appendChild(meta);}document.querySelectorAll('meta[name="theme-color"]').forEach(m=>{if(m!==meta)m.remove();});meta.content=bg;};
+  tint();const watch=new MutationObserver(tint);watch.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
   if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(err=>console.warn('[pwa] service worker not registered',err));
-  return ()=>{window.removeEventListener('beforeinstallprompt',onPrompt);window.removeEventListener('appinstalled',onInstalled);};
+  return ()=>{watch.disconnect();window.removeEventListener('beforeinstallprompt',onPrompt);window.removeEventListener('appinstalled',onInstalled);};
  },[]);
  return null;
 }
