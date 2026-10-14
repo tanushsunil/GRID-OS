@@ -1022,3 +1022,25 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 .account-item:hover{background:var(--hover)}
 .account-item.danger{color:var(--red)}
 .sidebar-bottom{padding-bottom:20px}
+/* ===== Phones: wordmark on top, Instagram-style floating tab bar at the bottom ===== */
+.mobile-wordmark,.tabbar,.drawer-account{display:none}
+@media(max-width:700px){
+ :root .topbar,:root:not([data-glass=off]) .topbar{position:sticky;top:0;z-index:20;height:56px;justify-content:flex-end;padding:0 10px 0 16px;border-bottom:0;box-shadow:none}
+ .topbar>div:first-child>:not(.mobile-wordmark),.topbar>div:last-child>:not(.notifications){display:none!important}
+ .topbar>div:first-child{flex:0}
+ .mobile-wordmark{display:flex;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+ .content{padding-bottom:calc(112px + env(safe-area-inset-bottom))}
+ .app-footer{display:none}
+ .tabbar{display:flex;align-items:center;justify-content:space-between;position:fixed;z-index:35;left:16px;right:16px;bottom:calc(14px + env(safe-area-inset-bottom));height:64px;padding:7px;border-radius:999px;background:color-mix(in srgb,var(--surface) 88%,transparent);border:1px solid var(--border);box-shadow:0 18px 40px -14px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6)}
+ :root:not([data-glass=off]) .tabbar{background:var(--glass-tint),var(--glass-thick);border-color:var(--glass-line)}
+ .tabbar>a,.tabbar>button{flex:1;display:grid;place-items:center;height:50px;border:0;border-radius:999px;background:transparent;color:var(--text);transition:background var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out)}
+ .tabbar>a:not(.active){color:color-mix(in srgb,var(--text) 82%,transparent)}
+ .tabbar>.active{background:color-mix(in srgb,var(--text) 12%,transparent);color:var(--accent)}
+ .tabbar-me .avatar{width:32px;height:32px;font-size:11px;border-color:transparent}
+ .tabbar-me.active{background:transparent!important}.tabbar-me.active .avatar{box-shadow:0 0 0 2px var(--accent)}
+ .toast{bottom:calc(92px + env(safe-area-inset-bottom))}
+ .sidebar{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+ .drawer-account{display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 4px 0;border-top:1px solid var(--border)}
+ .drawer-account>span:not(.avatar){flex:1;display:grid;min-width:0}.drawer-account .avatar{width:36px;height:36px;font-size:11px}
+ .drawer-account strong{font-size:13px}.drawer-account small{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
