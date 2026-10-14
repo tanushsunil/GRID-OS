@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {ArrowRight,Mail,Lock,Eye,EyeOff,Clapperboard,Wallet,BarChart3,ArrowLeft,AlertTriangle,CheckCircle2,Info,Loader2,KeyRound} from 'lucide-react';
-import {GridLogo,LOGO} from './logo';
+import {GridLogo,LOGO,Wordmark} from './logo';
 import DisplayToggles from './display-toggles';
 import {requestJson} from '@/lib/http';
 import {normaliseGridCode,GRID_CODE_EXAMPLE} from '@/lib/grid-code';
@@ -93,7 +93,7 @@ export default function LoginForm({initialMode,demo,ready,linkError}:{initialMod
 
   <aside className="auth-brand">
    <svg className="auth-watermark" viewBox={LOGO.viewBox.join(' ')} aria-hidden="true"><path d={LOGO.letters.d} fillRule="evenodd"/>{LOGO.stripes.map(s=><path key={s.d} d={s.d}/>)}</svg>
-   <div className="auth-brand-top"><GridLogo size={52}/></div>
+   <div className="auth-brand-top"><Wordmark size={34}/></div>
    <div className="auth-brand-body">
     <h1>Your work,<br/>from first brief<br/>to final delivery.</h1>
     <p>GRID OS brings production, finance and data together in one connected workspace.</p>
@@ -104,7 +104,7 @@ export default function LoginForm({initialMode,demo,ready,linkError}:{initialMod
 
   <main className="auth-main">
    <div className="auth-card">
-    <div className="auth-card-logo"><GridLogo size={40}/></div>
+    <div className="auth-card-logo"><Wordmark size={28}/></div>
     {demo?<>
      <span className="eyebrow">DEMO WORKSPACE</span>
      <h2>Explore GRID OS</h2>

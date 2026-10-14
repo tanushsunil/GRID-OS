@@ -1000,3 +1000,11 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 .accent-option.on{border-color:var(--swatch);background:color-mix(in srgb,var(--swatch) 10%,transparent)}
 .accent-option small{color:var(--muted);font-size:10px}
 .accent-swatch{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--swatch);color:#fff}
+/* GRID OS wordmark — GRID in Archivo extended black (as on the GRID website), OS in a light weight */
+.wordmark{display:inline-flex;align-items:baseline;gap:.22em;font-family:var(--font-wordmark),var(--font-sf-pro),sans-serif;line-height:1;color:var(--text);text-transform:uppercase;white-space:nowrap}
+.wordmark b{font-weight:900;font-variation-settings:'wdth' 125;letter-spacing:-.03em}
+.wordmark span{font-weight:300;font-variation-settings:'wdth' 125;letter-spacing:0;opacity:.85}
+.brand .brand-symbol{display:none}
+.brand .brand-wordmark{margin-right:auto}
+:root[data-sidebar=collapsed] .brand .brand-symbol{display:block}
+:root[data-sidebar=collapsed] .brand .brand-wordmark{display:none}
