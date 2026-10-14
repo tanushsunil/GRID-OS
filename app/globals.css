@@ -1090,3 +1090,16 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 @keyframes sheet-up{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
 @keyframes sheet-fade{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){.profile-sheet,.profile-sheet-scrim{animation:none}}
+/* Phones: a seamless top. The installed app draws under the iPhone status bar (black-translucent), so every
+   screen keeps clear of it with the safe-area inset, and the header has no fill or line — just a blur that
+   fades out downwards into the page. */
+@media(max-width:700px){
+ :root .topbar,:root:not([data-glass=off]) .topbar{height:calc(56px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top);background:transparent;border:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+ .topbar::before{content:"";position:absolute;inset:0 0 -18px;z-index:-1;pointer-events:none;-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);-webkit-mask-image:linear-gradient(#000 55%,transparent);mask-image:linear-gradient(#000 55%,transparent)}
+ .mobile-wordmark{top:calc(50% + env(safe-area-inset-top)/2)}
+ .home-top{padding-top:calc(16px + env(safe-area-inset-top))}
+ .auth-shell{padding-top:calc(16px + env(safe-area-inset-top))}
+ .auth-toggles{top:calc(16px + env(safe-area-inset-top))}
+ .content,.topbar,.tabbar{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+ .tabbar{padding-left:7px;padding-right:7px}
+}
