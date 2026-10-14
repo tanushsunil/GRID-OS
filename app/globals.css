@@ -1023,7 +1023,7 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 .account-item.danger{color:var(--red)}
 .sidebar-bottom{padding-bottom:20px}
 /* ===== Phones: wordmark on top, Instagram-style floating tab bar at the bottom ===== */
-.mobile-wordmark,.tabbar,.drawer-account{display:none}
+.mobile-wordmark,.tabbar,.profile-sheet-wrap{display:none}
 @media(max-width:700px){
  :root .topbar,:root:not([data-glass=off]) .topbar{position:sticky;top:0;z-index:20;height:56px;justify-content:flex-end;padding:0 10px 0 16px;border-bottom:0;box-shadow:none}
  .topbar>div:first-child>:not(.mobile-wordmark),.topbar>div:last-child>:not(.notifications){display:none!important}
@@ -1039,10 +1039,6 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
  .tabbar-me .avatar{width:32px;height:32px;font-size:11px;border-color:transparent}
  .tabbar-me.active{background:transparent!important}.tabbar-me.active .avatar{box-shadow:0 0 0 2px var(--accent)}
  .toast{bottom:calc(92px + env(safe-area-inset-bottom))}
- .sidebar{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
- .drawer-account{display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 4px 0;border-top:1px solid var(--border)}
- .drawer-account>span:not(.avatar){flex:1;display:grid;min-width:0}.drawer-account .avatar{width:36px;height:36px;font-size:11px}
- .drawer-account strong{font-size:13px}.drawer-account small{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
 /* Phones: page icons under the heading on a section's home page */
 .quick-nav{display:none}
@@ -1070,3 +1066,26 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
  .tabbar>.active{background:rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
  :root[data-theme=light] .tabbar>.active{background:rgba(255,255,255,.55)}
 }
+/* Phones: no sidebar — your profile in the tab bar opens this sheet (details, display, Settings, Sign out) */
+@media(max-width:700px){
+ .sidebar,.nav-overlay{display:none!important}
+ .profile-sheet-wrap{display:block;position:fixed;inset:0;z-index:60}
+ .profile-sheet-scrim{position:absolute;inset:0;border:0;background:rgba(0,0,0,.35);animation:sheet-fade var(--dur-medium) var(--ease-out)}
+ .profile-sheet{position:absolute;left:12px;right:12px;bottom:calc(88px + env(safe-area-inset-bottom));display:grid;gap:4px;padding:10px;border-radius:28px;background:var(--surface);border:1px solid var(--border);box-shadow:0 24px 60px -18px rgba(0,0,0,.6);animation:sheet-up var(--dur-medium) var(--ease-out);transform-origin:bottom right}
+ :root:not([data-glass=off]) .profile-sheet{background:var(--glass-tint),var(--glass-thick);border-color:var(--glass-line);-webkit-backdrop-filter:var(--glass-blur);backdrop-filter:var(--glass-blur)}
+ .profile-sheet-head{display:flex;align-items:center;gap:12px;padding:8px 6px 14px 8px;margin-bottom:4px;border-bottom:1px solid var(--border)}
+ .profile-sheet-head .avatar{width:44px;height:44px;font-size:13px}
+ .profile-sheet-head>span:not(.avatar){flex:1;display:grid;min-width:0}
+ .profile-sheet-head strong{font-size:15px}
+ .profile-sheet-head small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .profile-sheet-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;font-size:14px;font-weight:500}
+ .profile-sheet-row select{max-width:60%;margin:0}
+ .profile-sheet-row .control-row{margin:0}
+ .profile-sheet-link{display:flex;align-items:center;gap:12px;width:100%;padding:13px 10px;border:0;border-radius:16px;background:transparent;font-size:14px;font-weight:500;color:var(--text);text-align:left}
+ .profile-sheet-link>svg:last-child:not(:first-child){margin-left:auto;color:var(--muted)}
+ .profile-sheet-link:hover,.profile-sheet-link:active{background:var(--hover)}
+ .profile-sheet-link.danger{color:var(--red)}
+}
+@keyframes sheet-up{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes sheet-fade{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.profile-sheet,.profile-sheet-scrim{animation:none}}

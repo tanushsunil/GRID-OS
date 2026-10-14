@@ -16,9 +16,8 @@ updates it needs — run them once, in order, in the Supabase SQL Editor (files 
 ## 1.6 — 15 Oct · Colours & wordmark
 - **New GRID OS wordmark:** GRID in the extra-wide black lettering from the GRID website (Archivo), with OS beside it in a light weight. It's in the sidebar, on the home screen, the sign-in page and the loading screen. The collapsed sidebar and the installed app keep the square GRID icon.
 - **One account menu:** your initials in the top bar now open your name, email and role, plus Settings and Sign out. The duplicate profile row at the bottom of the sidebar is gone.
-- **New phone layout:** the GRID OS wordmark sits at the top with notifications on the right. A floating liquid-glass tab bar at the bottom switches between Production, Finance and Data, opens Search, and opens your menu (all pages, Settings, display toggles, Sign out) from your initials. The bar is mostly see-through with a bright refractive rim; in Chrome and Edge its edges bend the page behind them like real glass.
+- **New phone layout:** the GRID OS wordmark sits at the top with notifications on the right. A floating liquid-glass tab bar at the bottom switches between Production, Finance and Data, opens Search, and opens a profile sheet from your initials with your details, display toggles, Settings and Sign out. There's no sidebar on phones. The bar is mostly see-through with a bright refractive rim; in Chrome and Edge its edges bend the page behind them like real glass.
 - **Page icons on phones:** each section's home page shows its pages as a row of icons under the heading (for Production: Dashboard, Projects, Board, Calendar, Rentals, Activity).
-- The menu now closes by itself when you pick a page.
 - **Choose each section's colour** in **Settings → Section colours**. The choice applies everywhere in that section: buttons, highlights, the sidebar and the background glow, in light and dark mode.
   - Production: Orange (original), Terracotta or Soft violet.
   - Finance: Green (original), Teal or Sage.
