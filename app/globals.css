@@ -966,3 +966,9 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 .pb-line select{margin:0}
 .pb-line-count{color:var(--muted);text-align:right}
 @media(max-width:700px){.pb-line{grid-template-columns:1fr;gap:4px}.pb-line-count{text-align:left}}
+/* Dashboard: the panel the eye should land on first (Delivery queue), tinted in the workspace accent */
+.panel.panel-focus{border-color:color-mix(in srgb,var(--accent) 35%,transparent);background:color-mix(in srgb,var(--accent) 7%,var(--surface))}
+:root:not([data-glass=off]) .panel.panel-focus{border-color:color-mix(in srgb,var(--accent) 35%,transparent);background:linear-gradient(color-mix(in srgb,var(--accent) 10%,transparent),color-mix(in srgb,var(--accent) 10%,transparent)),var(--glass)}
+.panel-focus .panel-heading{border-bottom-color:color-mix(in srgb,var(--accent) 22%,var(--border))}
+.panel-focus .panel-heading h2{color:var(--accent)}
+.panel-focus .delivery-row{border-bottom-color:color-mix(in srgb,var(--accent) 14%,var(--border))}

@@ -21,7 +21,7 @@ updates it needs — run them once, in order, in the Supabase SQL Editor (files 
 - Deleted invoices are taken out of Google Drive, and a deleted monthly invoice stays deleted — automatic invoicing won't prepare that month again.
 
 **Elsewhere**
-- **Production dashboard:** the Delivery queue leads the page, where Active projects used to be; Upcoming shoots, Active projects and Recent activity follow down the right.
+- **Production dashboard:** the Delivery queue leads the page with a soft orange tint, where Active projects used to be; Upcoming shoots, Active projects and Recent activity follow down the right.
 
 ## 1.4 — 12 Oct · Install as an app
 - **Install GRID OS** like YouTube Music: its own window, icon and Dock / taskbar entry, opening straight into your workspace.
