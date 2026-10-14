@@ -25,6 +25,9 @@ updates it needs — run them once, in order, in the Supabase SQL Editor (files 
   - Data: Blue (original), Indigo or Slate.
 - Saved for each browser and applied from the first frame, so there's no flash of the old colour.
 
+**Fixes**
+- Scrolling over the sidebar, the notifications panel, the account menu or the phone profile sheet no longer scrolls the page underneath; lists inside them still scroll on their own.
+
 ## 1.5 — 14 Oct · Deleting invoices
 **Database:** `013_delete_invoices.sql`
 - **Fix:** invoices couldn't be deleted on the live site — even drafts, because of how their line items were checked. Drafts now delete normally.

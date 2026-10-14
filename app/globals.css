@@ -1103,3 +1103,5 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
  .content,.topbar,.tabbar{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
  .tabbar{padding-left:7px;padding-right:7px}
 }
+/* Scrolling inside panels stays inside them (see lib/contain-scroll.ts for the wheel/touch side) */
+.sidebar,.notification-list,.notification-panel,.account-panel,.profile-sheet,.modal-content,.command-list{overscroll-behavior:contain}

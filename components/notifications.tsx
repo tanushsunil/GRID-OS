@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
+import {containScroll} from '@/lib/contain-scroll';
 import Link from 'next/link';
 import {Bell,CheckCheck,AlertTriangle,Clock,Clapperboard,Wallet,UserPlus,Users,Camera} from 'lucide-react';
 import type {Notification} from '@/lib/extras';
@@ -14,6 +15,7 @@ export default function Notifications({items,read,onRead,onReadAll}:{items:Notif
  // The panel is rendered at the top of the page (outside the frosted top bar) so its own backdrop blur
  // can see the page behind it — a blurred element nested inside another blurred element cannot.
  useLayoutEffect(()=>{if(!open)return;const place=()=>{const r=button.current?.getBoundingClientRect();if(r)setPos({top:r.bottom+10,right:Math.max(12,window.innerWidth-r.right-8)});};place();window.addEventListener('resize',place);window.addEventListener('scroll',place,true);return()=>{window.removeEventListener('resize',place);window.removeEventListener('scroll',place,true);};},[open]);
+ useEffect(()=>{if(!open||!pos||!panel.current)return;return containScroll(panel.current);},[open,pos]);
  useEffect(()=>{if(!open)return;const close=(e:MouseEvent)=>{const t=e.target as Node;if(!button.current?.contains(t)&&!panel.current?.contains(t))setOpen(false);};const esc=(e:KeyboardEvent)=>{if(e.key==='Escape'){setOpen(false);button.current?.focus();}};document.addEventListener('mousedown',close);document.addEventListener('keydown',esc);return()=>{document.removeEventListener('mousedown',close);document.removeEventListener('keydown',esc);};},[open]);
  return <div className="notifications">
   <button ref={button} className="icon-button bell" aria-label={`Notifications${unread.length?`, ${unread.length} unread`:''}`} aria-expanded={open} aria-haspopup="dialog" onClick={()=>setOpen(o=>!o)}><Bell size={17}/>{unread.length>0&&<span className="bell-count">{unread.length>9?'9+':unread.length}</span>}</button>

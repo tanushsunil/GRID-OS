@@ -1,6 +1,7 @@
 'use client';
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
+import {containScroll} from '@/lib/contain-scroll';
 import Link from 'next/link';
 import {Settings,LogOut} from 'lucide-react';
 import {Avatar} from './ui';
@@ -11,6 +12,7 @@ export default function AccountMenu({name,detail,role,onSignOut}:{name:string;de
  const button=useRef<HTMLButtonElement>(null);const panel=useRef<HTMLDivElement>(null);
  // rendered at the top of the page (like the notifications panel) so its own glass blur can see the page behind it
  useLayoutEffect(()=>{if(!open)return;const place=()=>{const r=button.current?.getBoundingClientRect();if(r)setPos({top:r.bottom+10,right:Math.max(12,window.innerWidth-r.right-8)});};place();window.addEventListener('resize',place);window.addEventListener('scroll',place,true);return()=>{window.removeEventListener('resize',place);window.removeEventListener('scroll',place,true);};},[open]);
+ useEffect(()=>{if(!open||!pos||!panel.current)return;return containScroll(panel.current);},[open,pos]);
  useEffect(()=>{if(!open)return;const close=(e:MouseEvent)=>{const t=e.target as Node;if(!button.current?.contains(t)&&!panel.current?.contains(t))setOpen(false);};const esc=(e:KeyboardEvent)=>{if(e.key==='Escape'){setOpen(false);button.current?.focus();}};document.addEventListener('mousedown',close);document.addEventListener('keydown',esc);return()=>{document.removeEventListener('mousedown',close);document.removeEventListener('keydown',esc);};},[open]);
  return <div className="account-menu">
   <button ref={button} type="button" className="account-button" aria-label={`Account: ${name}`} aria-expanded={open} aria-haspopup="menu" onClick={()=>setOpen(o=>!o)}><Avatar name={name} size="tiny"/></button>
