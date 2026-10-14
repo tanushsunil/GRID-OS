@@ -1008,3 +1008,17 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 .brand .brand-wordmark{margin-right:auto}
 :root[data-sidebar=collapsed] .brand .brand-symbol{display:block}
 :root[data-sidebar=collapsed] .brand .brand-wordmark{display:none}
+/* Account menu (top bar): replaces the sidebar profile row */
+.account-menu{display:flex}
+.account-button{display:inline-flex;padding:2px;border:0;background:transparent;border-radius:50%;transition:box-shadow var(--dur-fast) var(--ease-out)}
+.account-button:hover,.account-button[aria-expanded=true]{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 45%,transparent)}
+.notification-panel.account-panel{width:min(270px,calc(100vw - 32px));padding:6px}
+.account-head{display:flex;align-items:center;gap:11px;padding:10px 10px 12px;margin-bottom:4px;border-bottom:1px solid var(--border)}
+.account-head>span{display:grid;min-width:0}
+.account-head strong{font-size:13px;font-weight:650}
+.account-head small{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-head .account-role{margin-top:2px}
+.account-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:9px;background:transparent;font-size:13px;font-weight:500;color:var(--text);text-align:left}
+.account-item:hover{background:var(--hover)}
+.account-item.danger{color:var(--red)}
+.sidebar-bottom{padding-bottom:20px}
