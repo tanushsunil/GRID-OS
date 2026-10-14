@@ -6,7 +6,7 @@ export type AccentOption={id:string;label:string;light:string;dark:string};
 export const ACCENTS:Record<AccentSection,AccentOption[]>={
  production:[
   {id:'orange',label:'Orange',light:'#e2560d',dark:'#ff9d5c'},
-  {id:'terracotta',label:'Terracotta',light:'#b5603f',dark:'#e39a7c'},
+  {id:'terracotta',label:'Terracotta',light:'#93392f',dark:'#e48f80'},
   {id:'violet',label:'Soft violet',light:'#6553c9',dark:'#a99bff'},
  ],
  finance:[

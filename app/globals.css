@@ -973,9 +973,9 @@ dialog.modal[open]::backdrop{animation:backdrop-in var(--dur-medium) var(--ease-
 .panel-focus .panel-heading h2{color:var(--accent)}
 .panel-focus .delivery-row{border-bottom-color:color-mix(in srgb,var(--accent) 14%,var(--border))}
 /* ===== Accent choices (Settings → Section colours; options in lib/accents.ts) ===== */
-:root[data-theme=light][data-accent-production=terracotta]{--mod-production:#b5603f}:root[data-theme=dark][data-accent-production=terracotta]{--mod-production:#e39a7c}
-:root[data-theme=light][data-accent-production=terracotta]:not([data-section=finance]):not([data-section=data]){--accent:#b5603f;--accent-bg:#f8efec;--primary:#b85c3a;--primary-hover:#9c4e31;--glow-1:rgba(196,128,101,0.32);--glow-2:rgba(222,183,169,0.3);--glow-3:rgba(181,96,63,0.16)}
-:root[data-theme=dark][data-accent-production=terracotta]:not([data-section=finance]):not([data-section=data]){--accent:#e39a7c;--accent-bg:#2d1f19;--primary:#b85c3a;--primary-hover:#9c4e31;--glow-1:rgba(184,92,58,0.17);--glow-2:rgba(227,154,124,0.07);--glow-3:rgba(184,92,58,0.07)}
+:root[data-theme=light][data-accent-production=terracotta]{--mod-production:#93392f}:root[data-theme=dark][data-accent-production=terracotta]{--mod-production:#e48f80}
+:root[data-theme=light][data-accent-production=terracotta]:not([data-section=finance]):not([data-section=data]){--accent:#93392f;--accent-bg:#f4ebea;--primary:#9a3d31;--primary-hover:#83342a;--glow-1:rgba(169,97,89,0.32);--glow-2:rgba(206,166,161,0.3);--glow-3:rgba(147,57,47,0.16)}
+:root[data-theme=dark][data-accent-production=terracotta]:not([data-section=finance]):not([data-section=data]){--accent:#e48f80;--accent-bg:#2e1d1a;--primary:#9a3d31;--primary-hover:#83342a;--glow-1:rgba(154,61,49,0.17);--glow-2:rgba(228,143,128,0.07);--glow-3:rgba(154,61,49,0.07)}
 :root[data-theme=light][data-accent-production=violet]{--mod-production:#6553c9}:root[data-theme=dark][data-accent-production=violet]{--mod-production:#a99bff}
 :root[data-theme=light][data-accent-production=violet]:not([data-section=finance]):not([data-section=data]){--accent:#6553c9;--accent-bg:#f0eefa;--primary:#6b5bd2;--primary-hover:#5b4db2;--glow-1:rgba(132,117,212,0.32);--glow-2:rgba(186,178,231,0.3);--glow-3:rgba(101,83,201,0.16)}
 :root[data-theme=dark][data-accent-production=violet]:not([data-section=finance]):not([data-section=data]){--accent:#a99bff;--accent-bg:#221f33;--primary:#6b5bd2;--primary-hover:#5b4db2;--glow-1:rgba(107,91,210,0.17);--glow-2:rgba(169,155,255,0.07);--glow-3:rgba(107,91,210,0.07)}
